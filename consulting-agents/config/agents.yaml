@@ -1,0 +1,56 @@
+# Agent Registry Configuration
+# This file maps agent names to their configuration
+
+agents:
+  # Built-in Consulting Agents
+  - name: "(◆_◆) strategy-consultant"
+    file: "strategy-consultant.md"
+    role: strategy_consultant
+    enabled: true
+
+  - name: "(📊) data-analyst"
+    file: "data-analyst.md"
+    role: data_analyst
+    enabled: true
+
+  - name: "(🏦) industry-expert"
+    file: "industry-expert.md"
+    role: industry_expert
+    enabled: true
+
+  - name: "(⚡) devils-advocate"
+    file: "devils-advocate.md"
+    role: devils_advocate
+    enabled: true
+
+  - name: "(📝) executive-summarizer"
+    file: "executive-summarizer.md"
+    role: executive_summarizer
+    enabled: true
+
+  - name: "(👔) client-stakeholder"
+    file: "client-stakeholder.md"
+    role: client_stakeholder
+    enabled: true
+
+  # Meta Agents (for evolution system)
+  - name: "meta-evolution-manager"
+    file: "meta-evolution-manager.md"
+    role: meta_evolution
+    enabled: true
+
+  - name: "meta-quality-reviewer"
+    file: "meta-quality-reviewer.md"
+    role: meta_quality
+    enabled: true
+
+  - name: "meta-consensus-coordinator"
+    file: "meta-consensus-coordinator.md"
+    role: meta_consensus
+    enabled: true
+
+# Default agent for new debates
+default_agents:
+  - "(◆_◆) strategy-consultant"
+  - "(⚡) devils-advocate"
+  - "(📊) data-analyst"

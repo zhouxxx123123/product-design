@@ -1,0 +1,18 @@
+/**
+ * Shared types package entry point.
+ *
+ * Import from this barrel to get all domain, API, and event types:
+ *
+ * ```ts
+ * import { SessionStatus, CreateSessionRequest, WS_EVENTS } from 'shared/types';
+ * ```
+ */
+
+// Domain model — entities, enums, branded IDs, value objects
+export * from './domain';
+
+// API layer — request/response DTOs, pagination, error shape
+export * from './api';
+
+// Real-time — WebSocket event payloads and typed event maps
+export * from './events';

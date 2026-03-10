@@ -1,0 +1,28 @@
+{
+  "id": "c08a9a37",
+  "topic": "Market Entry Strategy for APAC",
+  "description": "",
+  "mode": "semi_autonomous",
+  "status": "completed",
+  "max_rounds": 10,
+  "current_round": 1,
+  "agent_ids": [
+    "(◆_◆) strategy-consultant",
+    "(⚡) devils-advocate",
+    "(📊) data-analyst"
+  ],
+  "created_by": "user",
+  "created_at": "2026-03-07T16:18:38.019294",
+  "started_at": "2026-03-07T16:18:38.019502",
+  "completed_at": "2026-03-07T16:37:22.477517",
+  "metadata": {},
+  "current_topic": "Market Entry Strategy for APAC",
+  "topic_history": [],
+  "consensus_reached": true,
+  "consensus_summary": "Consensus reached: APAC market entry is viable with phased approach starting with Singapore and Japan.",
+  "divergence_points": [],
+  "_metadata": {
+    "saved_at": "2026-03-07T16:37:22.477859",
+    "storage_type": "local"
+  }
+}

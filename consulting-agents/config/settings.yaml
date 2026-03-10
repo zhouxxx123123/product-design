@@ -1,0 +1,85 @@
+# Multi-Agent Collaboration Platform Configuration
+
+# Storage Configuration
+storage:
+  local_base_path: ".data"
+  postgres_connection: "${DATABASE_URL:-postgresql://consulting_agents:consulting_agents_secret@localhost:5432/consulting_agents}"
+
+  # Collection storage preferences
+  # Options: local, postgres, both
+  collection_preferences:
+    agents: local           # Agent definitions stored as Markdown files
+    sessions: postgres      # Session history in database
+    messages: postgres      # Messages in database
+    memories: postgres      # Agent memories in database
+    audit_logs: postgres    # Audit logs only in database
+    evolution: both         # Evolution records in both
+    cache: local            # Local cache
+
+  # Sync configuration
+  sync:
+    enabled: true
+    conflict_resolution: timestamp  # timestamp, local_wins, postgres_wins, manual
+    auto_sync_interval: 300         # Seconds between auto-sync
+
+# Debate Configuration
+debate:
+  default_mode: semi_autonomous
+  default_max_rounds: 10
+  convergence_threshold: 0.7
+  divergence_threshold: 0.3
+
+  # Speaking modes
+  speaking_modes:
+    - round_robin
+    - response_triggered
+    - priority_based
+
+# Evolution Configuration
+evolution:
+  enabled: true
+
+  # Auto-approval thresholds
+  auto_approval:
+    max_change_size: small    # small, medium, large
+    max_confidence: 0.8
+    allowed_types:
+      - prompt_optimization
+
+  # Approval paths
+  approval_paths:
+    realtime: auto
+    task_completion: meta_agent
+    human_feedback: human
+    peer_review: meta_agent
+
+  # Quality gates
+  quality_gates:
+    require_rationale: true
+    require_expected_improvements: true
+    max_daily_evolutions: 10
+
+# Security Configuration
+security:
+  audit_all_actions: true
+  require_approval_for:
+    - tool_usage_changes
+    - major_prompt_changes
+    - agent_deletion
+
+  sensitive_operations:
+    - evolution_apply
+    - agent_delete
+    - config_change
+
+# Agent Defaults
+agent_defaults:
+  model: inherit
+  color: blue
+  version: "1.0.0"
+
+# Logging
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/platform.log"

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4f1a93",
+                        "background-light": "#f7f6f8",
+                        "background-dark": "#181220",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "Noto Sans SC", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e0dce5; border-radius: 10px; }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb { background: #ccc6d1; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased min-h-screen">
+<div class="flex flex-col h-screen overflow-hidden">
+<!-- Header -->
+<header class="flex items-center justify-between px-8 py-4 bg-white dark:bg-slate-900 border-b border-primary/10 shadow-sm z-20">
+<div class="flex items-center gap-4">
+<button class="p-2 hover:bg-primary/5 rounded-full transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-400">arrow_back</span>
+</button>
+<div class="h-6 w-[1px] bg-slate-200 dark:bg-slate-700 mx-1"></div>
+<h1 class="text-xl font-bold tracking-tight">新建/编辑标准案例</h1>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex items-center mr-4 px-3 py-1.5 bg-primary/5 rounded-lg">
+<span class="material-symbols-outlined text-primary text-sm mr-2">info</span>
+<span class="text-xs text-primary/80 font-medium">当前状态: 编辑中</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/20">
+<img class="w-full h-full object-cover" data-alt="User profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCnBUUi3ktm8QXp8m5T9WNJQyIQAgt9IBaT5yiR9Suc1FxEE8VvoOq_hhw8EJN88d99Un_lpUoErAjrU6OA8jVEmqA0_op_PrpsvrbfJnUQXGT71kN70pxaWThnDghiFsoS-B-vzSmsQY1pihQN6yHeYOppF3bRFCgGFjgbvcqL226P9drN-XfEUMJV-JWsxSWg9P4-AiFxy9HqFYEn8U9lBCT_RNZAhfenkdKlKt5iqpgGm_lShEDJAPiV3ECAqTlaChK2Lz09AR7O"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Wrapper -->
+<main class="flex-1 flex overflow-hidden">
+<!-- Left Section: Metadata -->
+<aside class="w-[400px] border-r border-primary/10 bg-white dark:bg-slate-900 flex flex-col overflow-y-auto custom-scrollbar">
+<div class="p-6 space-y-8">
+<div>
+<h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-6 flex items-center">
+<span class="material-symbols-outlined text-sm mr-2">person_search</span>
+                            客户背景与元数据
+                        </h2>
+<div class="space-y-5">
+<div class="flex flex-col gap-1.5">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300">客户名称 <span class="text-red-500">*</span></label>
+<input class="w-full rounded-lg border-primary/10 focus:border-primary focus:ring-primary/20 bg-slate-50 dark:bg-slate-800 text-sm py-2.5" placeholder="请输入完整客户名称" type="text"/>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col gap-1.5">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300">所属行业</label>
+<select class="w-full rounded-lg border-primary/10 focus:border-primary focus:ring-primary/20 bg-slate-50 dark:bg-slate-800 text-sm py-2.5">
+<option>请选择行业</option>
+<option>制造业</option>
+<option>金融科技</option>
+<option>零售电商</option>
+<option>医疗健康</option>
+</select>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300">企业规模</label>
+<select class="w-full rounded-lg border-primary/10 focus:border-primary focus:ring-primary/20 bg-slate-50 dark:bg-slate-800 text-sm py-2.5">
+<option>请选择规模</option>
+<option>10-50人</option>
+<option>50-200人</option>
+<option>200-1000人</option>
+<option>1000人以上</option>
+</select>
+</div>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300">核心痛点摘要</label>
+<textarea class="w-full rounded-lg border-primary/10 focus:border-primary focus:ring-primary/20 bg-slate-50 dark:bg-slate-800 text-sm resize-none p-3" placeholder="请简要描述客户面临的主要业务挑战和技术难题..." rows="5"></textarea>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300">案例标签</label>
+<div class="flex flex-wrap gap-2 p-3 bg-slate-50 dark:bg-slate-800 border border-primary/10 rounded-lg">
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-primary/10 text-primary text-xs font-medium border border-primary/20">
+                                        数字化转型 <button class="hover:text-red-500"><span class="material-symbols-outlined text-[14px]">close</span></button>
+</span>
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-primary/10 text-primary text-xs font-medium border border-primary/20">
+                                        云原生 <button class="hover:text-red-500"><span class="material-symbols-outlined text-[14px]">close</span></button>
+</span>
+<input class="bg-transparent border-none focus:ring-0 text-xs p-0 w-20" placeholder="+ 添加标签" type="text"/>
+</div>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<!-- Right Section: Core Function Classification -->
+<section class="flex-1 flex flex-col bg-slate-50 dark:bg-background-dark overflow-y-auto custom-scrollbar">
+<div class="p-8 max-w-6xl mx-auto w-full">
+<div class="flex items-center justify-between mb-8">
+<div>
+<h2 class="text-lg font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">account_tree</span>
+                                核心功能分类与描述
+                            </h2>
+<p class="text-sm text-slate-500 dark:text-slate-400 mt-1">请通过四级结构定义本案例覆盖的功能范畴及标准方案描述。</p>
+</div>
+<button class="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary/90 transition-all shadow-md shadow-primary/20">
+<span class="material-symbols-outlined text-sm">add</span>
+                            添加更多功能点
+                        </button>
+</div>
+<!-- Column Selector Design -->
+<div class="space-y-6">
+<!-- Function Entry Card 1 -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-primary/10 overflow-hidden shadow-sm">
+<div class="bg-slate-50 dark:bg-slate-800 px-4 py-3 flex items-center justify-between border-b border-primary/10">
+<div class="flex items-center gap-3">
+<div class="size-6 bg-primary/20 text-primary rounded-full flex items-center justify-center text-[10px] font-bold">01</div>
+<span class="text-sm font-bold">功能配置单元</span>
+</div>
+<button class="text-slate-400 hover:text-red-500 transition-colors">
+<span class="material-symbols-outlined text-lg">delete_outline</span>
+</button>
+</div>
+<div class="p-6">
+<div class="grid grid-cols-4 gap-4 h-64">
+<!-- Col 1: Domain -->
+<div class="flex flex-col h-full border border-primary/10 rounded-lg overflow-hidden">
+<div class="bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold border-b border-primary/10 flex items-center">领域</div>
+<div class="flex-1 overflow-y-auto p-1 space-y-1 bg-white dark:bg-slate-900">
+<div class="p-2 text-xs font-medium rounded bg-primary/10 text-primary flex items-center justify-between">业务中台 <span class="material-symbols-outlined text-[14px]">chevron_right</span></div>
+<div class="p-2 text-xs font-medium rounded hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between cursor-pointer">数据智能 <span class="material-symbols-outlined text-[14px]">chevron_right</span></div>
+<div class="p-2 text-xs font-medium rounded hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between cursor-pointer">基础设施 <span class="material-symbols-outlined text-[14px]">chevron_right</span></div>
+</div>
+</div>
+<!-- Col 2: Subsystem -->
+<div class="flex flex-col h-full border border-primary/10 rounded-lg overflow-hidden">
+<div class="bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold border-b border-primary/10">子系统</div>
+<div class="flex-1 overflow-y-auto p-1 space-y-1 bg-white dark:bg-slate-900">
+<div class="p-2 text-xs font-medium rounded hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between cursor-pointer">订单中心 <span class="material-symbols-outlined text-[14px]">chevron_right</span></div>
+<div class="p-2 text-xs font-medium rounded bg-primary/10 text-primary flex items-center justify-between">营销引擎 <span class="material-symbols-outlined text-[14px]">chevron_right</span></div>
+<div class="p-2 text-xs font-medium rounded hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between cursor-pointer">支付中心 <span class="material-symbols-outlined text-[14px]">chevron_right</span></div>
+</div>
+</div>
+<!-- Col 3: Function Point -->
+<div class="flex flex-col h-full border border-primary/10 rounded-lg overflow-hidden">
+<div class="bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold border-b border-primary/10">功能点</div>
+<div class="flex-1 overflow-y-auto p-1 space-y-1 bg-white dark:bg-slate-900">
+<div class="p-2 text-xs font-medium rounded hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between cursor-pointer">领券算法 <span class="material-symbols-outlined text-[14px]">chevron_right</span></div>
+<div class="p-2 text-xs font-medium rounded bg-primary/10 text-primary flex items-center justify-between">多阶阶梯券 <span class="material-symbols-outlined text-[14px]">chevron_right</span></div>
+<div class="p-2 text-xs font-medium rounded hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between cursor-pointer">核销规则 <span class="material-symbols-outlined text-[14px]">chevron_right</span></div>
+</div>
+</div>
+<!-- Col 4: Standard Description (Input area) -->
+<div class="flex flex-col h-full bg-slate-50 dark:bg-slate-800 rounded-lg p-3">
+<div class="text-xs font-bold mb-2">标准描述录入</div>
+<textarea class="flex-1 rounded border-primary/10 focus:border-primary focus:ring-primary/20 text-xs resize-none p-2 bg-white dark:bg-slate-900" placeholder="请对该功能在本案例中的具体实现方案进行详细说明..."></textarea>
+</div>
+</div>
+</div>
+</div>
+<!-- Function Entry Card 2 (Add Template) -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-dashed border-primary/30 p-8 flex flex-col items-center justify-center text-slate-400 group cursor-pointer hover:border-primary/50 transition-all">
+<div class="size-12 rounded-full bg-primary/5 flex items-center justify-center mb-3 group-hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-primary/60 group-hover:text-primary">add_circle</span>
+</div>
+<p class="text-sm font-medium">点击此处继续添加功能点</p>
+<p class="text-xs mt-1">支持通过多级菜单快速定位系统功能</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer Actions -->
+<footer class="bg-white dark:bg-slate-900 border-t border-primary/10 px-8 py-4 flex items-center justify-between z-20">
+<div class="flex items-center text-slate-400 text-xs italic">
+<span class="material-symbols-outlined text-[14px] mr-1">history_edu</span>
+                上次自动保存于 14:32:05
+            </div>
+<div class="flex items-center gap-4">
+<button class="px-6 py-2 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">取消</button>
+<div class="h-6 w-[1px] bg-slate-200 dark:bg-slate-700"></div>
+<button class="px-6 py-2 text-sm font-bold text-primary bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors">存为草稿</button>
+<button class="px-8 py-2 text-sm font-bold text-white bg-primary hover:bg-primary/90 rounded-lg transition-all shadow-lg shadow-primary/20">保存并发布</button>
+</div>
+</footer>
+</div>
+<!-- Floating Copilot Button -->
+<div class="fixed bottom-24 right-8 z-50">
+<button class="group relative flex items-center justify-center size-14 rounded-full bg-primary text-white shadow-xl hover:scale-105 transition-transform active:scale-95" onclick="openCopilot()">
+<span class="material-symbols-outlined text-3xl">auto_fix_high</span>
+<!-- Tooltip/Label -->
+<span class="absolute right-full mr-4 px-3 py-1 bg-slate-800 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                OpenClaw Copilot 已就绪
+            </span>
+</button>
+</div>
+<script src="assets/common.js"></script>
+<script>
+        // 表单验证
+        function validateForm() {
+            let isValid = true;
+            const requiredFields = document.querySelectorAll('input[required], select[required]');
+
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    field.classList.add('border-red-500');
+                    isValid = false;
+                } else {
+                    field.classList.remove('border-red-500');
+                }
+            });
+
+            return isValid;
+        }
+
+        // 实时验证清除错误
+        document.querySelectorAll('input, select').forEach(field => {
+            field.addEventListener('input', () => {
+                field.classList.remove('border-red-500');
+            });
+        });
+
+        // 保存并发布
+        document.querySelector('button.bg-primary:last-of-type')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (validateForm()) {
+                if (window.Toast) Toast.show('案例保存成功！', 'success');
+            } else {
+                if (window.Toast) Toast.show('请填写必填项', 'error');
+            }
+        });
+
+        // 存为草稿
+        document.querySelector('button.bg-primary\\/10')?.addEventListener('click', () => {
+            if (window.Toast) Toast.show('已保存为草稿', 'info');
+        });
+
+        // 取消按钮
+        document.querySelector('button.text-slate-600')?.addEventListener('click', () => {
+            if (confirm('确定要取消吗？未保存的内容将丢失。')) {
+                if (window.Toast) Toast.show('已取消', 'info');
+            }
+        });
+
+        // 返回按钮
+        document.querySelector('button .material-symbols-outlined')?.parentElement?.addEventListener('click', () => {
+            if (window.Toast) Toast.show('返回上一页', 'info');
+        });
+
+        // Copilot
+        function openCopilot() {
+            if (window.Toast) Toast.show('OpenClaw Copilot 已启动', 'info');
+        }
+    </script>
+</body></html>

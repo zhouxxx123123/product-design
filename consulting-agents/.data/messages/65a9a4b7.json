@@ -1,0 +1,18 @@
+{
+  "id": "65a9a4b7",
+  "session_id": "c08a9a37",
+  "agent_id": "(📊) data-analyst",
+  "agent_name": "",
+  "round_number": 1,
+  "message_type": "statement",
+  "content": "Based on our market research, the APAC region shows 15% YoY growth in this sector...",
+  "references_to": [],
+  "sentiment": null,
+  "importance_score": 0.5,
+  "created_at": "2026-03-07T16:24:00.215211",
+  "metadata": {},
+  "_metadata": {
+    "saved_at": "2026-03-07T16:24:00.215262",
+    "storage_type": "local"
+  }
+}

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ec5b13",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#221610",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<title>租户管理 - 超级管理员后台</title>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
+<div class="relative flex h-screen w-full overflow-hidden">
+<!-- Sidebar Navigation -->
+<aside class="flex w-64 flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark">
+<div class="flex items-center gap-3 px-6 py-8">
+<div class="flex size-8 items-center justify-center rounded-lg bg-primary text-white">
+<span class="material-symbols-outlined">shield_person</span>
+</div>
+<h2 class="text-xl font-bold tracking-tight">管理后台</h2>
+</div>
+<div class="flex flex-1 flex-col px-4">
+<div class="mb-6 px-2">
+<h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">超级管理员</h3>
+<p class="text-sm text-slate-500">系统最高权限</p>
+</div>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 rounded-xl bg-primary/10 px-3 py-2 text-primary" href="#">
+<span class="material-symbols-outlined">groups</span>
+<span class="text-sm font-medium">租户管理</span>
+</a>
+<a class="flex items-center gap-3 rounded-xl px-3 py-2 text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-sm font-medium">用户管理</span>
+</a>
+<a class="flex items-center gap-3 rounded-xl px-3 py-2 text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined">package_2</span>
+<span class="text-sm font-medium">套餐配置</span>
+</a>
+<a class="flex items-center gap-3 rounded-xl px-3 py-2 text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined">monitoring</span>
+<span class="text-sm font-medium">资源监控</span>
+</a>
+<a class="flex items-center gap-3 rounded-xl px-3 py-2 text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="text-sm font-medium">系统日志</span>
+</a>
+<a class="flex items-center gap-3 rounded-xl px-3 py-2 text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">系统设置</span>
+</a>
+</nav>
+</div>
+<div class="border-t border-slate-200 p-4 dark:border-slate-800">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-full bg-slate-200 dark:bg-slate-700" data-alt="Admin user avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBW_oL_ahBPwEeP7UDijSnIKgtdbmTVJsElsVNbDaxw9DimB5Da6ZdJvxC5_Y7VTyzSljlyTSqkrYJ4MM1UUgIvQOs-Mm8q0egTTt9MPkho0hLGTXwBEiNUNWLVJzzJsXbWXcRNAE1mKBZzB9rXqZbxrdSIyZmpwlJUXPy0lc4W03MHWvSguR5kS4hhAy6H9Giol46WMVP7vEzdwsfvQ1Qs7-YgPZlqDMVDoKQJTxtn0LB39TMgwJQ9PDF9CHlKr-J2-3ndVBPbai-H')"></div>
+<div class="flex-1 overflow-hidden">
+<p class="truncate text-sm font-bold">Admin User</p>
+<p class="truncate text-xs text-slate-500">superadmin@system.com</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex flex-1 flex-col overflow-y-auto">
+<!-- Top Nav Bar -->
+<header class="flex items-center justify-between border-b border-slate-200 bg-white px-8 py-4 dark:border-slate-800 dark:bg-background-dark">
+<div class="flex items-center gap-2 text-sm text-slate-500">
+<span>首页</span>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="font-medium text-slate-900 dark:text-slate-100">租户管理</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+<input class="h-10 w-64 rounded-xl border-slate-200 bg-slate-50 pl-10 pr-4 text-sm focus:border-primary focus:ring-primary dark:border-slate-800 dark:bg-slate-900" placeholder="搜索租户..." type="text"/>
+</div>
+<button class="relative flex size-10 items-center justify-center rounded-xl bg-slate-50 text-slate-600 dark:bg-slate-900 dark:text-slate-400">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute right-2 top-2 size-2 rounded-full bg-primary"></span>
+</button>
+</div>
+</header>
+<!-- Content Area (Zone C) -->
+<div class="p-8">
+<div class="mb-8 flex flex-wrap items-end justify-between gap-4">
+<div>
+<h1 class="text-3xl font-black tracking-tight">租户管理</h1>
+<p class="mt-2 text-slate-500">管理系统内所有渠道商租户及其资源配额</p>
+</div>
+<button class="flex items-center gap-2 rounded-xl bg-primary px-6 py-3 font-bold text-white shadow-lg shadow-primary/20 transition-transform hover:scale-[1.02] active:scale-[0.98]">
+<span class="material-symbols-outlined">add</span>
+                    创建新租户
+                </button>
+</div>
+<!-- Filters -->
+<div class="mb-6 flex gap-3 overflow-x-auto pb-2">
+<button class="flex items-center gap-2 whitespace-nowrap rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white dark:bg-slate-100 dark:text-slate-900">
+                    全部租户
+                    <span class="material-symbols-outlined text-sm">keyboard_arrow_down</span>
+</button>
+<button class="flex items-center gap-2 whitespace-nowrap rounded-xl bg-white border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300">
+                    正常状态
+                </button>
+<button class="flex items-center gap-2 whitespace-nowrap rounded-xl bg-white border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300">
+                    已禁用
+                </button>
+<button class="flex items-center gap-2 whitespace-nowrap rounded-xl bg-white border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300">
+                    即将到期
+                </button>
+</div>
+<!-- Table Container -->
+<div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-background-dark">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-slate-100 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/50">
+<th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">租户名称</th>
+<th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">会话配额</th>
+<th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">AI 额度</th>
+<th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">状态</th>
+<th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">到期时间</th>
+<th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">操作</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+<!-- Row 1 -->
+<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold">T1</div>
+<div>
+<p class="font-semibold text-slate-900 dark:text-white">天工科技</p>
+<p class="text-xs text-slate-400">ID: TN-49201</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-sm">
+<span class="font-medium text-slate-700 dark:text-slate-300">50,000</span>
+<span class="text-xs text-slate-400">/月</span>
+</td>
+<td class="px-6 py-4 text-sm">
+<span class="font-medium text-slate-700 dark:text-slate-300">1,000,000</span>
+<span class="text-xs text-slate-400">Tokens</span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
+<span class="size-1.5 rounded-full bg-emerald-500"></span>
+                                    正常
+                                </span>
+</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">2025-06-15</td>
+<td class="px-6 py-4">
+<div class="flex gap-2">
+<button class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-primary dark:hover:bg-slate-800">
+<span class="material-symbols-outlined text-xl">edit</span>
+</button>
+<button class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800">
+<span class="material-symbols-outlined text-xl">settings_applications</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold">YF</div>
+<div>
+<p class="font-semibold text-slate-900 dark:text-white">云帆互联</p>
+<p class="text-xs text-slate-400">ID: TN-33102</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">10,000</td>
+<td class="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">200,000</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-500/10 dark:text-rose-400">
+<span class="size-1.5 rounded-full bg-rose-500"></span>
+                                    禁用
+                                </span>
+</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">2024-12-31</td>
+<td class="px-6 py-4 text-slate-400">
+<div class="flex gap-2">
+<button class="rounded-lg p-1 hover:bg-slate-100 hover:text-primary dark:hover:bg-slate-800">
+<span class="material-symbols-outlined text-xl">edit</span>
+</button>
+<button class="rounded-lg p-1 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800">
+<span class="material-symbols-outlined text-xl">settings_applications</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold">LX</div>
+<div>
+<p class="font-semibold text-slate-900 dark:text-white">领航讯息</p>
+<p class="text-xs text-slate-400">ID: TN-55610</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">100,000</td>
+<td class="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">5,000,000</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-500/10 dark:text-amber-400">
+<span class="size-1.5 rounded-full bg-amber-500"></span>
+                                    即将到期
+                                </span>
+</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">2024-03-20</td>
+<td class="px-6 py-4 text-slate-400">
+<div class="flex gap-2">
+<button class="rounded-lg p-1 hover:bg-slate-100 hover:text-primary dark:hover:bg-slate-800">
+<span class="material-symbols-outlined text-xl">edit</span>
+</button>
+<button class="rounded-lg p-1 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800">
+<span class="material-symbols-outlined text-xl">settings_applications</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="border-t border-slate-100 bg-slate-50/30 px-6 py-4 dark:border-slate-800 dark:bg-slate-900/30">
+<div class="flex items-center justify-between">
+<p class="text-sm text-slate-500">显示 1 到 10 条，共 32 条租户数据</p>
+<div class="flex gap-2">
+<button class="rounded-lg border border-slate-200 bg-white p-1 text-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="flex size-8 items-center justify-center rounded-lg bg-primary font-medium text-white shadow-sm">1</button>
+<button class="flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">2</button>
+<button class="flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">3</button>
+<button class="rounded-lg border border-slate-200 bg-white p-1 text-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- OpenClaw Copilot -->
+<div class="fixed bottom-8 right-8 z-50">
+<button class="group relative flex size-14 items-center justify-center rounded-full bg-slate-900 text-white shadow-2xl transition-all hover:scale-110 active:scale-95 dark:bg-primary">
+<span class="material-symbols-outlined text-3xl">smart_toy</span>
+<div class="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold dark:bg-slate-900">3</div>
+<!-- Copilot Label (Visible on Hover) -->
+<div class="pointer-events-none absolute bottom-full right-0 mb-4 scale-95 opacity-0 transition-all group-hover:scale-100 group-hover:opacity-100">
+<div class="whitespace-nowrap rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-xl dark:bg-slate-800">
+                需要协助吗？OpenClaw Copilot 在线
+            </div>
+<div class="ml-auto mr-5 size-3 translate-y-[-6px] rotate-45 bg-slate-900 dark:bg-slate-800"></div>
+</div>
+</button>
+</div>
+</body></html>

@@ -1,0 +1,239 @@
+version: '3.9'
+
+services:
+  # PostgreSQL 数据库 (包含 pgvector 扩展)
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: liuguang-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-liuguang}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-liuguang}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - liuguang-network
+
+  # Redis 缓存和消息队列
+  redis:
+    image: redis:7-alpine
+    container_name: liuguang-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - liuguang-network
+
+  # MinIO 对象存储
+  minio:
+    image: minio/minio:latest
+    container_name: liuguang-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - liuguang-network
+
+  # 创建 MinIO bucket
+  minio-setup:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+        sleep 10;
+        /usr/bin/mc config host add myminio http://minio:9000 ${MINIO_ACCESS_KEY:-minioadmin} ${MINIO_SECRET_KEY:-minioadmin};
+        /usr/bin/mc mb myminio/${MINIO_BUCKET_NAME:-liuguang} --ignore-existing;
+        /usr/bin/mc policy set download myminio/${MINIO_BUCKET_NAME:-liuguang};
+        exit 0;
+      "
+    networks:
+      - liuguang-network
+
+  # NestJS 后端服务
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: liuguang-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-password}
+      DB_NAME: ${DB_NAME:-liuguang}
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-here}
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-liuguang}
+      AI_SERVICE_URL: http://ai:8000
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
+      - backend_node_modules:/app/node_modules
+    networks:
+      - liuguang-network
+
+  # Python AI 服务
+  ai:
+    build:
+      context: ./ai
+      dockerfile: Dockerfile
+    container_name: liuguang-ai
+    restart: unless-stopped
+    environment:
+      DEBUG: ${DEBUG:-true}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-liuguang}
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-liuguang}
+      TENCENT_SECRET_ID: ${TENCENT_SECRET_ID}
+      TENCENT_SECRET_KEY: ${TENCENT_SECRET_KEY}
+      TENCENT_REGION: ${TENCENT_REGION:-ap-beijing}
+      MOONSHOT_API_KEY: ${MOONSHOT_API_KEY}
+      MOONSHOT_BASE_URL: ${MOONSHOT_BASE_URL:-https://api.moonshot.cn/v1}
+      MOONSHOT_MODEL: ${MOONSHOT_MODEL:-kimi-k2.5}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    ports:
+      - "${AI_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./ai:/app
+    networks:
+      - liuguang-network
+
+  # Celery Worker (任务队列)
+  celery-worker:
+    build:
+      context: ./ai
+      dockerfile: Dockerfile
+    container_name: liuguang-celery-worker
+    restart: unless-stopped
+    command: celery -A celery_tasks worker --loglevel=info --concurrency=4
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-liuguang}
+      REDIS_URL: redis://redis:6379/0
+      TENCENT_SECRET_ID: ${TENCENT_SECRET_ID}
+      TENCENT_SECRET_KEY: ${TENCENT_SECRET_KEY}
+      MOONSHOT_API_KEY: ${MOONSHOT_API_KEY}
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - liuguang-network
+
+  # Celery Beat (定时任务)
+  celery-beat:
+    build:
+      context: ./ai
+      dockerfile: Dockerfile
+    container_name: liuguang-celery-beat
+    restart: unless-stopped
+    command: celery -A celery_tasks beat --loglevel=info
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    depends_on:
+      - redis
+    networks:
+      - liuguang-network
+
+  # Flower (Celery监控)
+  flower:
+    image: mher/flower:latest
+    container_name: liuguang-flower
+    restart: unless-stopped
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      FLOWER_BASIC_AUTH: ${FLOWER_AUTH:-admin:password}
+    ports:
+      - "${FLOWER_PORT:-5555}:5555"
+    depends_on:
+      - redis
+    networks:
+      - liuguang-network
+
+  # React 前端 (开发模式)
+  frontend:
+    image: node:20-alpine
+    container_name: liuguang-frontend
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host"
+    environment:
+      VITE_API_URL: http://localhost:3000
+      VITE_WS_URL: ws://localhost:3000
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - liuguang-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  backend_node_modules:
+  frontend_node_modules:
+
+networks:
+  liuguang-network:
+    driver: bridge

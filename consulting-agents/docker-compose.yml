@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: consulting-agents-db
+    environment:
+      POSTGRES_USER: consulting_agents
+      POSTGRES_PASSWORD: consulting_agents_secret
+      POSTGRES_DB: consulting_agents
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U consulting_agents -d consulting_agents"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Optional: Adminer for database management
+  adminer:
+    image: adminer
+    container_name: consulting-agents-adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    profiles:
+      - admin
+
+volumes:
+  postgres_data:

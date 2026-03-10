@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>提纲模板编辑器 - 中科琉光调研工具</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4f1a93",
+                        "background-light": "#f7f6f8",
+                        "background-dark": "#181220",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "Noto Sans SC", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e0dce5; border-radius: 10px; }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb { background: #ccc6d1; }
+        .drag-handle { cursor: grab; }
+        .drag-handle:active { cursor: grabbing; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased min-h-screen">
+<div class="flex flex-col h-screen overflow-hidden">
+<!-- Header -->
+<header class="flex items-center justify-between px-6 py-3 bg-white dark:bg-slate-900 border-b border-primary/10 shadow-sm z-20">
+<div class="flex items-center gap-4">
+<button class="p-2 hover:bg-primary/5 rounded-full transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-400">arrow_back</span>
+</button>
+<div class="h-6 w-[1px] bg-slate-200 dark:bg-slate-700 mx-1"></div>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">edit_note</span>
+<input class="text-xl font-bold tracking-tight bg-transparent border-none focus:ring-0 p-0 w-96 placeholder-slate-400" placeholder="输入模板标题..." type="text" value="制造业数字化转型调研模板"/>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex items-center mr-4 px-3 py-1.5 bg-primary/5 rounded-lg">
+<span class="material-symbols-outlined text-primary text-sm mr-2">edit</span>
+<span class="text-xs text-primary/80 font-medium">编辑模式</span>
+</div>
+<button class="px-4 py-2 text-sm font-bold text-primary bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">save</span>
+                        保存草稿
+                    </button>
+<button class="px-6 py-2 text-sm font-bold text-white bg-primary hover:bg-primary/90 rounded-lg transition-all shadow-lg shadow-primary/20 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">publish</span>
+                        发布模板
+                    </button>
+<div class="h-8 w-[1px] bg-slate-200 dark:bg-slate-700 mx-2"></div>
+<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/20">
+<img class="w-full h-full object-cover" src="https://ui-avatars.com/api/?name=Admin&amp;background=4f1a93&amp;color=fff" alt="User"/>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 flex overflow-hidden">
+<!-- Left Sidebar: Department Tree -->
+<aside class="w-72 border-r border-primary/10 bg-white dark:bg-slate-900 flex flex-col">
+<div class="p-4 border-b border-primary/10">
+<h3 class="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">account_tree</span>
+                        部门分类
+                    </h3>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-1">
+<!-- Department 1 -->
+<div class="space-y-1">
+<div class="flex items-center gap-2 p-2 rounded-lg bg-primary/10 text-primary cursor-pointer">
+<span class="material-symbols-outlined text-sm">expand_more</span>
+<span class="material-symbols-outlined text-sm">folder_open</span>
+<span class="text-sm font-medium flex-1">核心业务部门</span>
+<span class="text-xs bg-primary/20 px-1.5 py-0.5 rounded">3</span>
+</div>
+<div class="ml-6 space-y-1">
+<div class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer group">
+<span class="material-symbols-outlined text-sm text-slate-400 drag-handle opacity-0 group-hover:opacity-100">drag_indicator</span>
+<span class="text-sm text-slate-600 dark:text-slate-400">生产部</span>
+</div>
+<div class="flex items-center gap-2 p-2 rounded-lg bg-primary/5 cursor-pointer border-l-2 border-primary">
+<span class="material-symbols-outlined text-sm text-slate-400 drag-handle opacity-0 group-hover:opacity-100">drag_indicator</span>
+<span class="text-sm font-medium text-primary">销售部</span>
+</div>
+<div class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer group">
+<span class="material-symbols-outlined text-sm text-slate-400 drag-handle opacity-0 group-hover:opacity-100">drag_indicator</span>
+<span class="text-sm text-slate-600 dark:text-slate-400">采购部</span>
+</div>
+</div>
+</div>
+<!-- Department 2 -->
+<div class="space-y-1">
+<div class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer text-slate-600 dark:text-slate-400">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+<span class="material-symbols-outlined text-sm">folder</span>
+<span class="text-sm font-medium flex-1">技术支撑部门</span>
+<span class="text-xs bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">2</span>
+</div>
+</div>
+<!-- Department 3 -->
+<div class="space-y-1">
+<div class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer text-slate-600 dark:text-slate-400">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+<span class="material-symbols-outlined text-sm">folder</span>
+<span class="text-sm font-medium flex-1">管理支持部门</span>
+<span class="text-xs bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">1</span>
+</div>
+</div>
+</div>
+<div class="p-4 border-t border-primary/10 bg-slate-50 dark:bg-slate-800/50">
+<button class="w-full flex items-center justify-center gap-2 py-2 px-4 bg-white dark:bg-slate-800 border border-primary/20 text-primary font-medium rounded-lg text-sm hover:bg-primary/5 transition-colors">
+<span class="material-symbols-outlined text-lg">add</span>
+                        添加部门
+                    </button>
+</div>
+</aside>
+<!-- Right Main Content: Question Editor -->
+<section class="flex-1 flex flex-col bg-slate-50 dark:bg-background-dark overflow-hidden">
+<div class="flex items-center justify-between px-6 py-4 bg-white dark:bg-slate-900 border-b border-primary/10">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">quiz</span>
+<h2 class="text-lg font-bold">问题列表</h2>
+<span class="text-sm text-slate-500">销售部</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs text-slate-400">预计总时长: 45分钟</span>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-6">
+<div class="max-w-4xl mx-auto space-y-4">
+<!-- Question Card 1 -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-primary/10 overflow-hidden shadow-sm">
+<div class="bg-slate-50 dark:bg-slate-800 px-4 py-3 flex items-center justify-between border-b border-primary/10">
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1 text-slate-400">
+<span class="material-symbols-outlined text-lg drag-handle cursor-grab">drag_indicator</span>
+<span class="text-xs font-bold bg-primary text-white w-6 h-6 rounded-full flex items-center justify-center">1</span>
+</div>
+<span class="text-sm font-bold">问题配置单元</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="text-slate-400 hover:text-primary transition-colors" title="复制">
+<span class="material-symbols-outlined text-lg">content_copy</span>
+</button>
+<button class="text-slate-400 hover:text-red-500 transition-colors" title="删除">
+<span class="material-symbols-outlined text-lg">delete_outline</span>
+</button>
+</div>
+</div>
+<div class="p-5 space-y-4">
+<!-- Question Text -->
+<div class="space-y-2">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">help_outline</span>
+                                问题文本 <span class="text-red-500">*</span>
+                            </label>
+<textarea class="w-full rounded-lg border-primary/10 focus:border-primary focus:ring-primary/20 bg-slate-50 dark:bg-slate-800 text-sm resize-none p-3" placeholder="请输入调研问题..." rows="2">当前销售流程中最主要的痛点是什么？</textarea>
+</div>
+<!-- Follow-up Prompt -->
+<div class="space-y-2">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">chat</span>
+                                追问提示语
+                            </label>
+<textarea class="w-full rounded-lg border-primary/10 focus:border-primary focus:ring-primary/20 bg-slate-50 dark:bg-slate-800 text-sm resize-none p-3" placeholder="输入AI追问时的提示语..." rows="2">请具体描述这个痛点对业务的影响，以及目前采取的应对措施。</textarea>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<!-- Expected Output -->
+<div class="space-y-2">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">output</span>
+                                    预期产出
+                                </label>
+<input class="w-full rounded-lg border-primary/10 focus:border-primary focus:ring-primary/20 bg-slate-50 dark:bg-slate-800 text-sm py-2.5 px-3" placeholder="预期的回答要点..." type="text" value="痛点描述、影响范围、现有解决方案"/>
+</div>
+<!-- Estimated Duration -->
+<div class="space-y-2">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">timer</span>
+                                    预计时长(分钟)
+                                </label>
+<div class="flex items-center gap-2">
+<input class="w-full rounded-lg border-primary/10 focus:border-primary focus:ring-primary/20 bg-slate-50 dark:bg-slate-800 text-sm py-2.5 px-3" max="60" min="1" type="number" value="5"/>
+<span class="text-xs text-slate-400">分钟</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Question Card 2 -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-primary/10 overflow-hidden shadow-sm">
+<div class="bg-slate-50 dark:bg-slate-800 px-4 py-3 flex items-center justify-between border-b border-primary/10">
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1 text-slate-400">
+<span class="material-symbols-outlined text-lg drag-handle cursor-grab">drag_indicator</span>
+<span class="text-xs font-bold bg-primary text-white w-6 h-6 rounded-full flex items-center justify-center">2</span>
+</div>
+<span class="text-sm font-bold">问题配置单元</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="text-slate-400 hover:text-primary transition-colors" title="复制">
+<span class="material-symbols-outlined text-lg">content_copy</span>
+</button>
+<button class="text-slate-400 hover:text-red-500 transition-colors" title="删除">
+<span class="material-symbols-outlined text-lg">delete_outline</span>
+</button>
+</div>
+</div>
+<div class="p-5 space-y-4">
+<div class="space-y-2">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">help_outline</span>
+                                问题文本 <span class="text-red-500">*</span>
+                            </label>
+<textarea class="w-full rounded-lg border-primary/10 focus:border-primary focus:ring-primary/20 bg-slate-50 dark:bg-slate-800 text-sm resize-none p-3" placeholder="请输入调研问题..." rows="2">销售团队目前使用哪些数字化工具？</textarea>
+</div>
+<div class="space-y-2">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">chat</span>
+                                追问提示语
+                            </label>
+<textarea class="w-full rounded-lg border-primary/10 focus:border-primary focus:ring-primary/20 bg-slate-50 dark:bg-slate-800 text-sm resize-none p-3" placeholder="输入AI追问时的提示语..." rows="2">这些工具的使用频率如何？是否存在数据孤岛问题？</textarea>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-2">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">output</span>
+                                    预期产出
+                                </label>
+<input class="w-full rounded-lg border-primary/10 focus:border-primary focus:ring-primary/20 bg-slate-50 dark:bg-slate-800 text-sm py-2.5 px-3" placeholder="预期的回答要点..." type="text" value="工具清单、使用频率、集成情况"/>
+</div>
+<div class="space-y-2">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">timer</span>
+                                    预计时长(分钟)
+                                </label>
+<div class="flex items-center gap-2">
+<input class="w-full rounded-lg border-primary/10 focus:border-primary focus:ring-primary/20 bg-slate-50 dark:bg-slate-800 text-sm py-2.5 px-3" max="60" min="1" type="number" value="8"/>
+<span class="text-xs text-slate-400">分钟</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Add Question Placeholder -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-dashed border-primary/30 p-8 flex flex-col items-center justify-center text-slate-400 group cursor-pointer hover:border-primary/50 transition-all">
+<div class="size-12 rounded-full bg-primary/5 flex items-center justify-center mb-3 group-hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-primary/60 group-hover:text-primary text-2xl">add_circle</span>
+</div>
+<p class="text-sm font-medium">点击添加新问题</p>
+<p class="text-xs mt-1">支持拖拽排序调整问题顺序</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-white dark:bg-slate-900 border-t border-primary/10 px-6 py-3 flex items-center justify-between z-20">
+<div class="flex items-center text-slate-400 text-xs italic">
+<span class="material-symbols-outlined text-[14px] mr-1">history_edu</span>
+                上次自动保存于 14:32:05
+            </div>
+<div class="flex items-center gap-4">
+<span class="text-xs text-slate-500">共 8 个问题 | 预计总时长: 45 分钟</span>
+<div class="h-6 w-[1px] bg-slate-200 dark:bg-slate-700"></div>
+<button class="px-6 py-2 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">add</span>
+                    添加问题
+                </button>
+</div>
+</footer>
+</div>
+<!-- Floating Copilot Button -->
+<div class="fixed bottom-24 right-8 z-50">
+<button class="group relative flex items-center justify-center size-14 rounded-full bg-primary text-white shadow-xl hover:scale-105 transition-transform active:scale-95" onclick="openCopilot()">
+<span class="material-symbols-outlined text-3xl">auto_fix_high</span>
+<!-- Tooltip/Label -->
+<span class="absolute right-full mr-4 px-3 py-1 bg-slate-800 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                OpenClaw Copilot 已就绪
+            </span>
+</button>
+</div>
+<script src="assets/common.js"></script>
+<script>
+        // 部门树展开/折叠
+        document.querySelectorAll('.cursor-pointer').forEach(item => {
+            item.addEventListener('click', function(e) {
+                if (e.target.closest('.drag-handle')) return;
+
+                const arrow = this.querySelector('.material-symbols-outlined:first-child');
+                if (arrow && (arrow.textContent === 'expand_more' || arrow.textContent === 'chevron_right')) {
+                    const isExpanded = arrow.textContent === 'expand_more';
+                    arrow.textContent = isExpanded ? 'chevron_right' : 'expand_more';
+
+                    // 查找子级
+                    const parent = this.parentElement;
+                    const children = parent.querySelector('.ml-6, .ml-4');
+                    if (children) {
+                        children.style.display = isExpanded ? 'none' : 'block';
+                    }
+                }
+            });
+        });
+
+        // 部门选择
+        document.querySelectorAll('.ml-6 > div, .ml-4 > div').forEach(dept => {
+            dept.addEventListener('click', function() {
+                document.querySelectorAll('.ml-6 > div, .ml-4 > div').forEach(d => {
+                    d.classList.remove('bg-primary/5', 'border-l-2', 'border-primary');
+                    d.classList.add('hover:bg-slate-100');
+                });
+                this.classList.remove('hover:bg-slate-100');
+                this.classList.add('bg-primary/5', 'border-l-2', 'border-primary');
+
+                const deptName = this.querySelector('span:last-child')?.textContent;
+                if (window.Toast) Toast.show(`已选择部门：${deptName}`, 'info');
+            });
+        });
+
+        // 问题编辑
+        document.querySelectorAll('.border-b.border-slate-100').forEach(question => {
+            const editBtn = question.querySelector('button:first-of-type');
+            editBtn?.addEventListener('click', function() {
+                if (window.Toast) Toast.show('编辑问题', 'info');
+            });
+        });
+
+        // 添加问题
+        document.querySelector('button:has(.material-symbols-outlined):last-of-type')?.addEventListener('click', () => {
+            if (window.Toast) Toast.show('添加新问题', 'info');
+        });
+
+        // 保存草稿
+        document.querySelector('button.bg-primary\\/10')?.addEventListener('click', () => {
+            if (window.Toast) Toast.show('已保存为草稿', 'success');
+        });
+
+        // 发布模板
+        document.querySelector('button.bg-primary:not(.bg-primary\\/10)')?.addEventListener('click', () => {
+            const title = document.querySelector('input[type="text"]')?.value;
+            if (!title || title.trim() === '') {
+                if (window.Toast) Toast.show('请输入模板标题', 'error');
+                return;
+            }
+            if (window.Toast) Toast.show('模板发布成功！', 'success');
+        });
+
+        // 返回按钮
+        document.querySelector('button:first-of-type')?.addEventListener('click', () => {
+            if (confirm('确定要返回吗？未保存的更改将丢失。')) {
+                if (window.Toast) Toast.show('已返回', 'info');
+            }
+        });
+
+        // Copilot
+        function openCopilot() {
+            if (window.Toast) Toast.show('OpenClaw Copilot 已启动', 'info');
+        }
+    </script>
+</body></html>

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4f1a93",
+                        "background-light": "#f7f6f8",
+                        "background-dark": "#181220",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .glass-effect {
+            backdrop-filter: blur(8px);
+            background-color: rgba(255, 255, 255, 0.6);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e0dce5;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark min-h-screen relative overflow-hidden">
+<!-- Background Content (Blurred Modal: Create Survey Session) -->
+<div class="fixed inset-0 flex items-center justify-center p-8 blur-md scale-[0.98] pointer-events-none">
+<div class="bg-white dark:bg-slate-900 w-full max-w-4xl h-[600px] rounded-xl shadow-2xl border border-primary/10 p-8 flex flex-col gap-6">
+<div class="flex items-center justify-between border-b border-primary/10 pb-4">
+<h1 class="text-2xl font-bold text-slate-900 dark:text-white">新建访谈任务</h1>
+<span class="material-symbols-outlined text-slate-400">close</span>
+</div>
+<div class="space-y-6">
+<div class="h-12 bg-primary/5 rounded-lg w-full"></div>
+<div class="h-32 bg-primary/5 rounded-lg w-full"></div>
+<div class="grid grid-cols-2 gap-4">
+<div class="h-12 bg-primary/5 rounded-lg"></div>
+<div class="h-12 bg-primary/5 rounded-lg"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Overlay / Backdrop -->
+<div class="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-40"></div>
+<!-- Side Drawer (Right 35% Width) -->
+<div class="fixed top-0 right-0 h-full w-[35%] min-w-[420px] bg-white dark:bg-slate-900 shadow-[-10px_0_30px_rgba(0,0,0,0.1)] z-50 flex flex-col transform transition-transform duration-300">
+<!-- Header -->
+<header class="flex items-center justify-between px-6 py-4 border-b border-primary/10">
+<div class="flex items-center gap-3">
+<div class="bg-primary/10 p-2 rounded-lg">
+<span class="material-symbols-outlined text-primary text-xl">person_add</span>
+</div>
+<h2 class="text-lg font-bold text-slate-900 dark:text-white tracking-tight">新建客户档案</h2>
+</div>
+<button class="p-2 hover:bg-background-light dark:hover:bg-slate-800 rounded-full transition-colors text-slate-500">
+<span class="material-symbols-outlined">close</span>
+</button>
+</header>
+<!-- Form Content (Scrollable) -->
+<div class="flex-1 overflow-y-auto px-6 py-4 custom-scrollbar space-y-8">
+<!-- Section 1: Basic Info -->
+<section class="space-y-4">
+<div class="flex items-center gap-2 border-l-4 border-primary pl-3">
+<h3 class="text-sm font-bold text-primary uppercase tracking-wider">基本信息</h3>
+</div>
+<div class="space-y-4 pt-2">
+<div class="flex flex-col gap-1.5">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                            客户公司名称 <span class="text-red-500">*</span>
+</label>
+<input class="w-full h-11 px-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm" placeholder="请输入客户公司全称" type="text"/>
+</div>
+<div class="grid grid-cols-1 gap-4">
+<div class="flex flex-col gap-1.5">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300">所属行业</label>
+<div class="relative">
+<select class="appearance-none w-full h-11 px-4 pr-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm">
+<option value="">请选择行业</option>
+<option value="medical">医疗器械</option>
+<option value="smart">智能制造</option>
+<option value="ecommerce">跨境电商</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-2.5 text-slate-400 pointer-events-none">expand_more</span>
+</div>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300">企业规模</label>
+<div class="relative">
+<select class="appearance-none w-full h-11 px-4 pr-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm">
+<option value="">请选择规模</option>
+<option value="small">0-50人</option>
+<option value="medium">50-200人</option>
+<option value="large">200人以上</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-2.5 text-slate-400 pointer-events-none">expand_more</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 2: Contacts -->
+<section class="space-y-4">
+<div class="flex items-center gap-2 border-l-4 border-primary pl-3">
+<h3 class="text-sm font-bold text-primary uppercase tracking-wider">联系人信息</h3>
+</div>
+<div class="space-y-4 pt-2">
+<div class="flex flex-col gap-1.5">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300">主联系人姓名</label>
+<input class="w-full h-11 px-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm" placeholder="请输入姓名" type="text"/>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col gap-1.5">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300">职务</label>
+<input class="w-full h-11 px-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm" placeholder="如：采购经理" type="text"/>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300">联系方式</label>
+<input class="w-full h-11 px-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm" placeholder="手机或邮箱" type="text"/>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 3: Business Tags -->
+<section class="space-y-4">
+<div class="flex items-center gap-2 border-l-4 border-primary pl-3">
+<h3 class="text-sm font-bold text-primary uppercase tracking-wider">业务标签</h3>
+</div>
+<div class="space-y-4 pt-2">
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center justify-between">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300">客户标签</label>
+<div class="group relative flex items-center gap-1 text-primary cursor-help">
+<span class="material-symbols-outlined text-[18px] animate-pulse">auto_fix_high</span>
+<span class="text-[10px] font-bold">AI 智能推荐</span>
+<!-- Tooltip -->
+<div class="absolute bottom-full right-0 mb-2 w-48 p-2 bg-slate-800 text-white text-[11px] rounded shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                                    输入行业后，AI 可自动推荐常用业务标签
+                                    <div class="absolute top-full right-4 border-8 border-transparent border-t-slate-800"></div>
+</div>
+</div>
+</div>
+<div class="min-h-[80px] w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg flex flex-wrap gap-2 items-start bg-white dark:bg-slate-800">
+<span class="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-xs font-medium rounded">
+                                高潜力客户
+                                <span class="material-symbols-outlined text-xs cursor-pointer">close</span>
+</span>
+<span class="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-xs font-medium rounded">
+                                年度集采
+                                <span class="material-symbols-outlined text-xs cursor-pointer">close</span>
+</span>
+<input class="border-none focus:ring-0 text-xs flex-1 bg-transparent h-6" placeholder="输入并回车..." type="text"/>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Footer -->
+<footer class="p-6 border-t border-primary/10 bg-background-light/30 dark:bg-slate-900/50 flex items-center justify-end gap-3">
+<button class="px-6 h-10 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                取消
+            </button>
+<button class="px-6 h-10 rounded-lg text-sm font-semibold bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all flex items-center gap-2">
+<span class="material-symbols-outlined text-lg">save</span>
+                保存并关联
+            </button>
+</footer>
+</div>
+<!-- AI Copilot Button (Fixed Top-Level) -->
+<div class="fixed bottom-6 right-6 z-[60]">
+<button class="size-14 rounded-full bg-primary text-white shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all" onclick="openCopilot()">
+<div class="relative size-full flex items-center justify-center">
+<span class="material-symbols-outlined text-3xl">smart_toy</span>
+<!-- Badge -->
+<span class="absolute top-0 right-0 size-4 bg-red-500 border-2 border-white dark:border-background-dark rounded-full"></span>
+</div>
+</button>
+</div>
+<script src="assets/common.js"></script>
+<script>
+        // 表单验证
+        function validateForm() {
+            let isValid = true;
+            const requiredFields = document.querySelectorAll('input[required], select[required]');
+
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    field.classList.add('border-red-500');
+                    isValid = false;
+                } else {
+                    field.classList.remove('border-red-500');
+                }
+            });
+
+            return isValid;
+        }
+
+        // 实时验证
+        document.querySelectorAll('input, select').forEach(field => {
+            field.addEventListener('input', () => {
+                field.classList.remove('border-red-500');
+            });
+        });
+
+        // 下一步按钮
+        document.querySelector('button.bg-primary')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (validateForm()) {
+                if (window.Toast) Toast.show('进入下一步', 'info');
+            } else {
+                if (window.Toast) Toast.show('请填写必填项', 'error');
+            }
+        });
+
+        // 返回按钮
+        document.querySelector('button.border-slate-300')?.addEventListener('click', () => {
+            if (window.Toast) Toast.show('返回上一步', 'info');
+        });
+
+        // Copilot
+        function openCopilot() {
+            if (window.Toast) Toast.show('OpenClaw Copilot 已启动', 'info');
+        }
+    </script>
+</body></html>

@@ -1,9 +1,10 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -11,35 +12,33 @@ export default defineConfig({
       '@hooks': path.resolve(__dirname, './src/hooks'),
       '@stores': path.resolve(__dirname, './src/stores'),
       '@services': path.resolve(__dirname, './src/services'),
-      '@types': path.resolve(__dirname, './src/types'),
-      '@utils': path.resolve(__dirname, './src/utils'),
+      '@views': path.resolve(__dirname, './src/views'),
       '@shared': path.resolve(__dirname, '../shared'),
     },
   },
   server: {
-    port: 5173,
+    port: 3000,
     host: true,
     proxy: {
       '/api': {
-        target: process.env.VITE_API_URL || 'http://localhost:3000',
+        target: process.env.VITE_API_URL || 'http://localhost:4000',
         changeOrigin: true,
+      },
+      '/ai': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/ai/, '/api/v1'),
       },
     },
   },
   build: {
     outDir: 'dist',
     sourcemap: true,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          ui: ['@headlessui/react', '@heroicons/react'],
-        },
-      },
-    },
   },
   test: {
     globals: true,
     environment: 'jsdom',
+    setupFiles: ['./src/test-setup.ts'],
+    testTimeout: 15000,
   },
 });

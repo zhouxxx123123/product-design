@@ -28,9 +28,9 @@ export enum TemplateScope {
  * 访谈模板、问卷模板、报告模板等
  */
 @Entity('templates')
-@Index(['tenant_id', 'template_type'])
+@Index(['tenantId', 'templateType'])
 @Index(['scope'])
-@Index(['is_active'])
+@Index(['isActive'])
 export class TemplateEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -50,6 +50,7 @@ export class TemplateEntity {
   @Column({
     type: 'enum',
     enum: TemplateType,
+    name: 'template_type',
     default: TemplateType.INTERVIEW,
   })
   templateType: TemplateType;
@@ -86,18 +87,24 @@ export class TemplateEntity {
   tags: string[];
 
   @Column({ type: 'jsonb', default: {} })
-  variables: Record<string, {
-    type: string;
-    required: boolean;
-    default?: any;
-    description?: string;
-  }>;
+  variables: Record<
+    string,
+    {
+      type: string;
+      required: boolean;
+      default?: any;
+      description?: string;
+    }
+  >;
 
   @Column({ type: 'integer', name: 'usage_count', default: 0 })
   usageCount: number;
 
   @Column({ type: 'boolean', name: 'is_active', default: true })
   isActive: boolean;
+
+  @Column({ type: 'boolean', name: 'is_default', default: false })
+  isDefault: boolean;
 
   @Column({ type: 'jsonb', default: {} })
   metadata: Record<string, any>;

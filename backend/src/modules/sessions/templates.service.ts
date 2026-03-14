@@ -3,32 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
 import { TemplateEntity, TemplateType, TemplateScope } from '../../entities/template.entity';
 import { DefaultSection, DefaultQuestion } from './types/default-template.types';
+import { CreateTemplateDto } from './dto/create-template.dto';
+import { UpdateTemplateDto } from './dto/update-template.dto';
 
-export interface CreateTemplateDto {
-  name: string;
-  code?: string;
-  templateType?: TemplateType;
-  description?: string;
-  content: TemplateEntity['content'];
-  scope?: TemplateScope;
-  tags?: string[];
-  variables?: TemplateEntity['variables'];
-  metadata?: Record<string, unknown>;
-}
-
-export interface UpdateTemplateDto {
-  name?: string;
-  code?: string;
-  templateType?: TemplateType;
-  description?: string;
-  content?: TemplateEntity['content'];
-  scope?: TemplateScope;
-  tags?: string[];
-  variables?: TemplateEntity['variables'];
-  metadata?: Record<string, unknown>;
-  isActive?: boolean;
-  isDefault?: boolean;
-}
 
 export interface TemplateListQuery {
   page?: number;
@@ -44,6 +21,13 @@ export class TemplatesService {
     @InjectRepository(TemplateEntity)
     private readonly repo: Repository<TemplateEntity>,
   ) {}
+
+  private toResponse(template: TemplateEntity) {
+    return {
+      ...template,
+      title: template.name, // 映射 name 到 title 给前端
+    };
+  }
 
   async findAll(tenantId: string, query: TemplateListQuery) {
     const page = query.page ?? 1;
@@ -75,7 +59,7 @@ export class TemplatesService {
       .getManyAndCount();
 
     return {
-      data,
+      data: data.map(item => this.toResponse(item)),
       total,
       page,
       limit,
@@ -83,7 +67,7 @@ export class TemplatesService {
     };
   }
 
-  async findById(id: string, tenantId: string): Promise<TemplateEntity> {
+  private async getEntityById(id: string, tenantId: string): Promise<TemplateEntity> {
     const item = await this.repo.findOne({
       where: { id, deletedAt: IsNull() },
     });
@@ -97,38 +81,55 @@ export class TemplatesService {
     return item;
   }
 
+  async findById(id: string, tenantId: string) {
+    const item = await this.getEntityById(id, tenantId);
+    return this.toResponse(item);
+  }
+
   async create(
     tenantId: string,
     createdBy: string,
     dto: CreateTemplateDto,
-  ): Promise<TemplateEntity> {
+  ) {
     const item = this.repo.create({
       ...dto,
+      name: dto.title, // 映射前端 title 到 entity name
       tenantId,
       createdBy,
-      content: dto.content ?? {},
+      content: (dto.content ?? {}) as any,
       tags: dto.tags ?? [],
-      variables: dto.variables ?? {},
+      variables: (dto.variables ?? {}) as any,
       metadata: dto.metadata ?? {},
     });
-    return this.repo.save(item);
+    const saved = await this.repo.save(item);
+    return this.toResponse(saved);
   }
 
-  async update(id: string, tenantId: string, dto: UpdateTemplateDto): Promise<TemplateEntity> {
-    const item = await this.findById(id, tenantId);
-    Object.assign(item, dto);
-    return this.repo.save(item);
+  async update(id: string, tenantId: string, dto: UpdateTemplateDto) {
+    const item = await this.getEntityById(id, tenantId);
+
+    // 处理 title → name 映射
+    if (dto.title) {
+      item.name = dto.title;
+    }
+
+    // 移除 dto 中的 title，避免 Object.assign 覆盖
+    const { title, ...dtoWithoutTitle } = dto;
+    Object.assign(item, dtoWithoutTitle);
+
+    const saved = await this.repo.save(item);
+    return this.toResponse(saved);
   }
 
   async softDelete(id: string, tenantId: string): Promise<{ success: boolean }> {
-    const item = await this.findById(id, tenantId);
+    const item = await this.getEntityById(id, tenantId);
     item.deletedAt = new Date();
     await this.repo.save(item);
     return { success: true };
   }
 
-  async duplicate(id: string, tenantId: string): Promise<TemplateEntity> {
-    const source = await this.findById(id, tenantId);
+  async duplicate(id: string, tenantId: string) {
+    const source = await this.getEntityById(id, tenantId);
     const copy = this.repo.create({
       tenantId: source.tenantId,
       createdBy: source.createdBy,
@@ -144,11 +145,12 @@ export class TemplatesService {
       isActive: source.isActive,
       isDefault: false,
     });
-    return this.repo.save(copy);
+    const saved = await this.repo.save(copy);
+    return this.toResponse(saved);
   }
 
-  async setDefault(id: string, tenantId: string): Promise<TemplateEntity> {
-    const item = await this.findById(id, tenantId);
+  async setDefault(id: string, tenantId: string) {
+    const item = await this.getEntityById(id, tenantId);
     // Clear all other defaults for this tenant
     await this.repo
       .createQueryBuilder()
@@ -157,7 +159,8 @@ export class TemplatesService {
       .where('tenantId = :tenantId AND id != :id', { tenantId, id })
       .execute();
     item.isDefault = true;
-    return this.repo.save(item);
+    const saved = await this.repo.save(item);
+    return this.toResponse(saved);
   }
 
   async findCategories(tenantId: string): Promise<{ category: string; count: number }[]> {

@@ -14,6 +14,7 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
+import { ApiOkResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -63,6 +64,7 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
+  @ApiOkResponse({ description: '返回当前登录用户信息' })
   async getMe(@Req() req: RequestWithUser) {
     return this.usersService.findById(req.user.id);
   }

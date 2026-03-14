@@ -18,8 +18,10 @@ export class AddCasesEmbeddingVectorIndex1710000025000 implements MigrationInter
 
     // Create IVFFlat index for approximate nearest neighbor search
     // lists=100 is appropriate for moderate data volumes (thousands of cases)
+    // Note: CONCURRENTLY omitted — runs inside TypeORM's transaction block.
+    // For zero-downtime production builds, run this SQL manually outside a transaction.
     await queryRunner.query(`
-      CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_cases_embedding_ivfflat
+      CREATE INDEX IF NOT EXISTS idx_cases_embedding_ivfflat
       ON cases
       USING ivfflat (embedding vector_cosine_ops)
       WITH (lists = 100)
@@ -27,7 +29,7 @@ export class AddCasesEmbeddingVectorIndex1710000025000 implements MigrationInter
   }
 
   async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP INDEX CONCURRENTLY IF EXISTS idx_cases_embedding_ivfflat`);
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_cases_embedding_ivfflat`);
     // Revert column back to TEXT
     await queryRunner.query(`
       ALTER TABLE cases

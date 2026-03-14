@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import {
   Shield,
@@ -150,6 +150,21 @@ const FeatureFlagsView: React.FC = () => {
 
   const enabledCount = features.filter(f => f.enabled).length;
   const totalCount = features.length;
+
+  // Detect unsaved changes — warn on tab/window close
+  const hasUnsavedChanges = Object.keys(localFlags).length > 0 && saveStatus !== 'saved';
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   return (
     <div className="h-[calc(100vh-64px)] bg-slate-50 overflow-y-auto">
@@ -340,6 +355,31 @@ const FeatureFlagsView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Leave Confirmation Dialog */}
+      {showLeaveConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+          <div className="relative bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full">
+            <h3 className="text-lg font-bold text-slate-900 mb-2">确认离开？</h3>
+            <p className="text-sm text-slate-500 mb-6">您有未保存的功能开关配置，离开后更改将丢失。</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowLeaveConfirm(false)}
+                className="flex-1 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-all"
+              >
+                继续编辑
+              </button>
+              <button
+                onClick={() => { setLocalFlags({}); setSaveStatus('idle'); setShowLeaveConfirm(false); }}
+                className="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-all"
+              >
+                放弃更改
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

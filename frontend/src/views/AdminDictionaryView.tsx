@@ -51,6 +51,7 @@ const AdminDictionaryView: React.FC = () => {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [selectedNode, setSelectedNode] = useState<DictionaryNodeUI | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'hierarchy' | 'flat'>('hierarchy');
 
   const { data: nodesFlat = [], isLoading } = useQuery({
     queryKey: ['dictionary'],
@@ -189,9 +190,17 @@ const AdminDictionaryView: React.FC = () => {
           <p className="text-slate-500 mt-1">维护「领域 → 子系统 → 功能点 → 描述」四级标准化分类体系。</p>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all shadow-sm">
+          <button
+            onClick={() => setViewMode(prev => prev === 'hierarchy' ? 'flat' : 'hierarchy')}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2.5 border rounded-xl text-sm font-semibold transition-all shadow-sm",
+              viewMode === 'flat'
+                ? "bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700"
+                : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+            )}
+          >
             <Layers className="w-4 h-4" />
-            层级视图
+            {viewMode === 'hierarchy' ? '层级视图' : '平铺视图'}
           </button>
           <button
             onClick={() => createMutation.mutate({ name: '新建领域' })}
@@ -224,6 +233,41 @@ const AdminDictionaryView: React.FC = () => {
                 {[1, 2, 3].map(i => (
                   <div key={i} className="animate-pulse bg-slate-100 rounded-xl h-10" />
                 ))}
+              </div>
+            ) : viewMode === 'flat' ? (
+              <div className="overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      <th className="text-left py-3 px-4">节点名称</th>
+                      <th className="text-left py-3 px-4">层级</th>
+                      <th className="text-left py-3 px-4">编码</th>
+                      <th className="text-left py-3 px-4">描述</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...nodesFlat]
+                      .sort((a, b) => (a.level ?? 0) - (b.level ?? 0) || a.name.localeCompare(b.name))
+                      .map((node) => (
+                        <tr
+                          key={node.id}
+                          onClick={() => setSelectedNode(node as DictionaryNodeUI)}
+                          className={cn(
+                            "border-b border-slate-50 cursor-pointer hover:bg-slate-50 transition-colors",
+                            selectedNode?.id === node.id && "bg-indigo-50"
+                          )}
+                        >
+                          <td className="py-3 px-4 font-medium text-slate-900">
+                            <span className="inline-block w-4 mr-1 text-slate-300">{'  '.repeat((node.level ?? 1) - 1)}</span>
+                            {node.name}
+                          </td>
+                          <td className="py-3 px-4 text-slate-500">L{node.level ?? 1}</td>
+                          <td className="py-3 px-4 text-slate-400 font-mono text-xs">{node.code ?? '—'}</td>
+                          <td className="py-3 px-4 text-slate-400 truncate max-w-[200px]">{node.description ?? '—'}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
               </div>
             ) : (
               renderTree(data)

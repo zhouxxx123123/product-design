@@ -11,6 +11,7 @@ import { casesApi } from '../services/cases';
 import { uploadFile, type UploadedFileInfo } from '../services/storage';
 import { useInsightExtract } from '../hooks/useInsightExtract';
 import { useWorkspaceSession } from '../hooks/useWorkspaceSession';
+import { useToastStore } from '../stores/toastStore';
 import {
   ArrowLeft,
   Mic,
@@ -135,7 +136,9 @@ const SurveyWorkspaceView: React.FC<SurveyWorkspaceProps> = ({ onBack, onViewCha
             }))
           );
         } catch (err) {
-          setAsrError(err instanceof Error ? err.message : '识别失败');
+          const errorMsg = err instanceof Error ? err.message : '识别失败';
+          setAsrError(errorMsg);
+          useToastStore.getState().addToast(`语音识别失败: ${errorMsg}`, 'error');
         } finally {
           setAsrLoading(false);
         }
@@ -395,7 +398,9 @@ const SurveyWorkspaceView: React.FC<SurveyWorkspaceProps> = ({ onBack, onViewCha
                         speaker: seg.speaker_tag === 0 ? '识别结果' : `说话人 ${seg.speaker_tag}`,
                       })));
                     } catch (err) {
-                      setAsrError(err instanceof Error ? err.message : '识别失败');
+                      const errorMsg = err instanceof Error ? err.message : '识别失败';
+                      setAsrError(errorMsg);
+                      useToastStore.getState().addToast(`语音识别失败: ${errorMsg}`, 'error');
                     } finally {
                       setAsrLoading(false);
                     }
@@ -478,8 +483,14 @@ const SurveyWorkspaceView: React.FC<SurveyWorkspaceProps> = ({ onBack, onViewCha
                 </div>
               ))}
               {asrError && activeTab !== 'files' && (
-                <div className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
-                  {asrError}
+                <div className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-xl px-4 py-3 flex items-center justify-between">
+                  <span>{asrError}</span>
+                  <button
+                    onClick={() => setAsrError(null)}
+                    className="ml-2 px-2 py-1 text-xs bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors"
+                  >
+                    重试
+                  </button>
                 </div>
               )}
               {asrLoading && activeTab !== 'files' && (

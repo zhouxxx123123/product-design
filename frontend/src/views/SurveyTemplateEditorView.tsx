@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { type TemplatePayload, type OutlineSection } from '../types';
+import { type TemplatePayload, type OutlineSection, type OutlineRequest } from '../types';
 import http from '../services/http';
 import { outlineApi } from '../services/outline';
 import { templatesApi, type CreateTemplateDto } from '../services/templates';

@@ -1,0 +1,56 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { TranscriptSegmentEntity } from '../../entities/transcript-segment.entity';
+import { CreateSegmentDto, BulkCreateTranscriptSegmentDto } from './transcript.dto';
+
+export { CreateSegmentDto } from './transcript.dto';
+
+@Injectable()
+export class TranscriptService {
+  constructor(
+    @InjectRepository(TranscriptSegmentEntity)
+    private readonly repo: Repository<TranscriptSegmentEntity>,
+  ) {}
+
+  async findBySession(sessionId: string, tenantId: string): Promise<TranscriptSegmentEntity[]> {
+    return this.repo.find({
+      where: { sessionId, tenantId },
+      order: { startMs: 'ASC', createdAt: 'ASC' },
+    });
+  }
+
+  async create(
+    sessionId: string,
+    tenantId: string,
+    dto: CreateSegmentDto,
+  ): Promise<TranscriptSegmentEntity> {
+    const segment = this.repo.create({
+      sessionId,
+      tenantId,
+      text: dto.text,
+      startMs: dto.startMs ?? null,
+      endMs: dto.endMs ?? null,
+      speaker: dto.speaker ?? null,
+    });
+    return this.repo.save(segment);
+  }
+
+  async bulkCreateSegments(
+    sessionId: string,
+    tenantId: string,
+    dto: BulkCreateTranscriptSegmentDto,
+  ): Promise<TranscriptSegmentEntity[]> {
+    const entities = dto.segments.map((seg) =>
+      this.repo.create({
+        sessionId,
+        tenantId,
+        text: seg.text,
+        startMs: seg.startMs ?? null,
+        endMs: seg.endMs ?? null,
+        speaker: seg.speaker ?? null,
+      }),
+    );
+    return this.repo.save(entities);
+  }
+}

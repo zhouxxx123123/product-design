@@ -50,5 +50,5 @@ export const casesApi = {
   update: (id: string, dto: UpdateCaseDto) => http.patch<Case>(`/cases/${id}`, dto),
   delete: (id: string) => http.delete(`/cases/${id}`),
   similar: (params: { text: string; limit?: number }) =>
-    http.get<SimilarCase[]>('/cases/similar', { params }),
+    http.get<{ data: SimilarCase[]; total: number }>('/cases/similar', { params }),
 };

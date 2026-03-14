@@ -153,7 +153,7 @@ const SurveyInsightsView: React.FC = () => {
   const { data: similarCases = [], isLoading: isSimilarLoading } = useQuery({
     queryKey: ['cases-similar', similarQueryText],
     queryFn: () =>
-      casesApi.similar({ text: similarQueryText!, limit: 10 }).then((r) => r.data),
+      casesApi.similar({ text: similarQueryText!, limit: 10 }).then((r) => r.data.data),
     enabled: !!similarQueryText && activeTab === 'cases',
     staleTime: 5 * 60 * 1000, // 5 minutes
   });

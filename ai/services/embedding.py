@@ -2,6 +2,8 @@
 嵌入向量服务 — 通过 Moonshot AI 将文本转换为 1536 维向量
 """
 
+import hashlib
+import math
 import structlog
 from typing import Optional
 from openai import AsyncOpenAI
@@ -13,6 +15,35 @@ logger = structlog.get_logger(__name__)
 # Moonshot embedding model
 # 注意：如果 Moonshot 不支持嵌入模型，可以临时使用 text-embedding-3-small 作为 fallback
 EMBEDDING_MODEL = "moonshot-v1-embedding"
+
+
+def _hash_embed(text: str, dims: int = 1536) -> list[float]:
+    """
+    基于文本哈希的确定性伪嵌入向量生成器。
+
+    当 Moonshot API 不可用时的降级方案，生成归一化的 1536 维向量。
+    使用字符三元组（trigram）的哈希值分布在向量空间中，然后 L2 归一化。
+
+    Args:
+        text: 输入文本
+        dims: 向量维度，默认 1536
+
+    Returns:
+        list[float]: 归一化的伪嵌入向量
+    """
+    vec = [0.0] * dims
+
+    # 使用重叠的字符三元组（trigram）
+    padded = f"__START__ {text} __END__"
+    for i in range(len(padded) - 2):
+        gram = padded[i:i+3]
+        h = int(hashlib.md5(gram.encode()).hexdigest(), 16)
+        idx = h % dims
+        vec[idx] += 1.0
+
+    # L2 归一化
+    norm = math.sqrt(sum(v * v for v in vec)) or 1.0
+    return [v / norm for v in vec]
 
 
 class EmbeddingService:
@@ -34,6 +65,8 @@ class EmbeddingService:
         """
         将文本字符串嵌入为 1536 维向量。
 
+        优先使用 Moonshot API，如遇 403/权限错误则降级到哈希嵌入。
+
         Args:
             text: 要嵌入的文本（会被截断到 8192 tokens 以内）
 
@@ -42,7 +75,7 @@ class EmbeddingService:
 
         Raises:
             ValueError: 如果文本为空
-            Exception: 如果 API 调用失败
+            Exception: 如果 API 调用失败且无法降级
         """
         if not text or not text.strip():
             raise ValueError("Text cannot be empty")
@@ -59,11 +92,19 @@ class EmbeddingService:
                 model=EMBEDDING_MODEL,
             )
             embedding = response.data[0].embedding
-            log.info("文本嵌入完成", dimensions=len(embedding))
+            log.info("文本嵌入完成 (Moonshot API)", dimensions=len(embedding))
             return embedding
         except Exception as e:
-            log.error("文本嵌入失败", error=str(e))
-            raise
+            error_str = str(e).lower()
+            # 检查是否为权限相关错误 (403, permission_denied, not open 等)
+            if any(keyword in error_str for keyword in ["403", "permission_denied", "not open", "forbidden"]):
+                log.warning("Moonshot 嵌入 API 不可用，使用哈希降级方案", error=str(e))
+                fallback_embedding = _hash_embed(truncated, dims=1536)
+                log.info("文本嵌入完成 (哈希降级)", dimensions=len(fallback_embedding))
+                return fallback_embedding
+            else:
+                log.error("文本嵌入失败", error=str(e))
+                raise
 
     async def close(self) -> None:
         """关闭 HTTP 客户端"""

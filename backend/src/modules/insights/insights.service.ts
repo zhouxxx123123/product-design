@@ -82,30 +82,72 @@ export class InsightsService {
     const aiResult = (await this.aiProxyService.extractInsight({
       transcript,
       interview_id: sessionId,
-    })) as unknown;
+    })) as Record<string, unknown>;
 
-    // 4. Normalize AI response
-    const rawInsights = Array.isArray(aiResult) ? aiResult : [];
+    // 4. Map AI response { themes, key_quotes, sentiment, summary } → layer 1/2/3 insights
+    // Layer 1 = key quotes (直接引用)
+    // Layer 2 = themes (主题)
+    // Layer 3 = summary + sentiment (战略洞察)
+    const normalizedInsights: Array<{ layer: number; content: Record<string, unknown> }> = [];
 
-    // 5. Delete existing AI-generated insights for this session (layer 1-3)
-    // to avoid duplicates on re-extraction
+    const themes = Array.isArray(aiResult['themes'])
+      ? (aiResult['themes'] as Record<string, unknown>[])
+      : [];
+    const keyQuotes = Array.isArray(aiResult['key_quotes'])
+      ? (aiResult['key_quotes'] as Record<string, unknown>[])
+      : [];
+    const sentiment = aiResult['sentiment'] as Record<string, unknown> | undefined;
+    const summary = typeof aiResult['summary'] === 'string' ? aiResult['summary'] : '';
+
+    // Layer 1: key quotes
+    for (const quote of keyQuotes) {
+      normalizedInsights.push({
+        layer: 1,
+        content: {
+          title: typeof quote['insight'] === 'string' ? quote['insight'] : '关键引用',
+          text: typeof quote['text'] === 'string' ? quote['text'] : '',
+          speaker: typeof quote['speaker'] === 'string' ? quote['speaker'] : '',
+        },
+      });
+    }
+
+    // Layer 2: themes
+    for (const theme of themes) {
+      normalizedInsights.push({
+        layer: 2,
+        content: {
+          title: typeof theme['title'] === 'string' ? theme['title'] : '主题',
+          text: typeof theme['description'] === 'string' ? theme['description'] : '',
+          evidence: Array.isArray(theme['evidence']) ? theme['evidence'] : [],
+        },
+      });
+    }
+
+    // Layer 3: summary + sentiment (one record)
+    if (summary || sentiment) {
+      normalizedInsights.push({
+        layer: 3,
+        content: {
+          title: '战略摘要',
+          text: summary,
+          sentiment: sentiment ?? {},
+        },
+      });
+    }
+
+    // 5. Delete existing AI-generated insights for this session to avoid duplicates
     await this.repo.delete({ sessionId, tenantId });
 
     // 6. Save new insights
-    const toSave = rawInsights
-      .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
-      .map((item) =>
-        this.repo.create({
-          sessionId,
-          tenantId,
-          editedBy: userId,
-          layer: typeof item['layer'] === 'number' ? item['layer'] : 1,
-          content:
-            typeof item['content'] === 'object' && item['content'] !== null
-              ? (item['content'] as Record<string, unknown>)
-              : { text: String(item['content'] ?? '') },
-        }),
-      );
+    const toSave = normalizedInsights.map((item) =>
+      this.repo.create({
+        sessionId,
+        tenantId,
+        editedBy: userId,
+        layer: item.layer,
+        content: item.content,
+      }),
+    );
 
     return this.repo.save(toSave);
   }

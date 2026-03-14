@@ -2,7 +2,10 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
 import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsArray, IsEnum } from 'class-validator';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 import { CaseEntity, CaseType, CaseStatus } from '../../entities/case.entity';
+import { CaseRepository } from '../case/repositories/case.repository';
 
 export class CreateCaseDto {
   @IsString()
@@ -90,6 +93,8 @@ export class CasesService {
   constructor(
     @InjectRepository(CaseEntity)
     private readonly repo: Repository<CaseEntity>,
+    private readonly caseRepository: CaseRepository,
+    private readonly httpService: HttpService,
   ) {}
 
   async findAll(tenantId: string, query: CaseListQuery) {
@@ -169,5 +174,22 @@ export class CasesService {
     item.deletedAt = new Date();
     await this.repo.save(item);
     return { success: true };
+  }
+
+  async similarSearch(
+    tenantId: string,
+    text: string,
+    limit: number = 10,
+  ): Promise<Array<CaseEntity & { similarity: number }>> {
+    // 1. Call AI layer to get embedding
+    const aiBaseUrl = process.env.AI_SERVICE_URL ?? 'http://localhost:8000';
+    const embedResp = await firstValueFrom(
+      this.httpService.post<{ embedding: number[] }>(`${aiBaseUrl}/api/v1/embed`, { text }),
+    );
+    const embedding = embedResp.data.embedding;
+
+    // 2. Use CaseRepository vector search
+    // Use a low threshold (0.05) to ensure results even with hash-based embeddings
+    return this.caseRepository.searchSimilar(tenantId, embedding, limit, 0.05);
   }
 }

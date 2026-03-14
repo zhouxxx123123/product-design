@@ -4,6 +4,7 @@ import { Repository, IsNull } from 'typeorm';
 import { InterviewSessionEntity, InterviewStatus } from '../../entities/interview-session.entity';
 import { SessionCommentEntity } from '../../entities/session-comment.entity';
 import { SessionCaseLinkEntity } from '../../entities/session-case-link.entity';
+import { StorageFileEntity } from '../../entities/storage-file.entity';
 import { CreateSessionDto, UpdateSessionDto } from './dto';
 
 export interface SessionListQuery {
@@ -14,6 +15,15 @@ export interface SessionListQuery {
   clientId?: string;
 }
 
+export type SessionWithRecording = Omit<InterviewSessionEntity, 'setCreatedAt' | 'setUpdatedAt'> & {
+  recordingUrl: string | null;
+};
+
+export type SessionListItem = Omit<InterviewSessionEntity, 'setCreatedAt' | 'setUpdatedAt'> & {
+  insightsCount: number;
+  commentsCount: number;
+};
+
 @Injectable()
 export class SessionsService {
   constructor(
@@ -23,6 +33,8 @@ export class SessionsService {
     private readonly commentsRepo: Repository<SessionCommentEntity>,
     @InjectRepository(SessionCaseLinkEntity)
     private readonly caseLinksRepo: Repository<SessionCaseLinkEntity>,
+    @InjectRepository(StorageFileEntity)
+    private readonly storageFileRepo: Repository<StorageFileEntity>,
   ) {}
 
   async findAll(tenantId: string, query: SessionListQuery) {
@@ -46,14 +58,31 @@ export class SessionsService {
       qb.andWhere('s.title ILIKE :search', { search: `%${query.search}%` });
     }
 
+    // Add aggregation counts via subqueries
+    qb.addSelect(
+      '(SELECT COUNT(*) FROM session_insights si WHERE si.session_id = s.id)',
+      's_insightsCount'
+    )
+    .addSelect(
+      '(SELECT COUNT(*) FROM session_comments sc WHERE sc.session_id = s.id)',
+      's_commentsCount'
+    );
+
     const [data, total] = await qb
       .orderBy('s.interviewDate', 'DESC')
       .skip((page - 1) * limit)
       .take(limit)
       .getManyAndCount();
 
+    // Transform data to include count fields
+    const transformedData: SessionListItem[] = data.map((item: any) => ({
+      ...item,
+      insightsCount: parseInt(item.s_insightsCount) || 0,
+      commentsCount: parseInt(item.s_commentsCount) || 0,
+    }));
+
     return {
-      data,
+      data: transformedData,
       total,
       page,
       limit,
@@ -61,14 +90,31 @@ export class SessionsService {
     };
   }
 
-  async findById(id: string, tenantId: string): Promise<InterviewSessionEntity> {
+  async findById(id: string, tenantId: string): Promise<SessionWithRecording> {
     const item = await this.repo.findOne({
       where: { id, tenantId, deletedAt: IsNull() },
     });
     if (!item) {
       throw new NotFoundException(`访谈会话 ${id} 不存在`);
     }
-    return item;
+
+    // Query for associated recording file if recordingFileId exists
+    let recordingUrl: string | null = null;
+    if (item.recordingFileId) {
+      const storageFile = await this.storageFileRepo.findOne({
+        where: {
+          id: item.recordingFileId,
+          tenantId,
+          deletedAt: IsNull(),
+        },
+      });
+      recordingUrl = storageFile?.url ?? null;
+    }
+
+    return {
+      ...item,
+      recordingUrl,
+    };
   }
 
   async create(

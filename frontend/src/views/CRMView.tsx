@@ -11,7 +11,6 @@ import {
   Mail,
   Phone,
   Globe,
-  MapPin,
   Download,
   Edit3,
   Trash2,
@@ -24,12 +23,12 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
 
-import CustomerDetailView from './CustomerDetailView';
-
 import { ViewType } from '../types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { clientsApi, CreateClientDto } from '../services/clients';
+import { clientExportService } from '../services/clientExport';
 import { useToastStore } from '../stores/toastStore';
+import { useDictionaryChildren } from '../services/dictionary';
 
 dayjs.extend(relativeTime);
 dayjs.locale('zh-cn');
@@ -39,7 +38,7 @@ function cn(...inputs: ClassValue[]) {
 }
 
 interface CRMViewProps {
-  onViewChange: (view: ViewType, data?: any) => void;
+  onViewChange: (view: ViewType, data?: unknown) => void;
 }
 
 interface Customer {
@@ -70,6 +69,11 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
       industry: industryFilter || undefined
     }).then(r => r.data),
   });
+
+  // Fetch dictionary data for industries and company sizes
+  const { data: industries = [], isLoading: isLoadingIndustries } = useDictionaryChildren('industry');
+  const { data: companySizes = [], isLoading: isLoadingCompanySizes } = useDictionaryChildren('company_size');
+
   const customers: Customer[] = (clientsData?.data ?? []).map(c => ({
     id: c.id,
     name: c.companyName,
@@ -89,7 +93,7 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       addToast('客户档案创建成功', 'success');
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       console.error('创建客户档案失败:', error);
       addToast(error?.message ?? '创建失败，请稍后重试', 'error');
     },
@@ -100,7 +104,7 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
   const [isExportConfigOpen, setIsExportConfigOpen] = useState(false);
   const [isExportProgressOpen, setIsExportProgressOpen] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [isCalling, setIsCalling] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
@@ -149,7 +153,7 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
   };
 
   useEffect(() => {
-    let interval: any;
+    let interval: ReturnType<typeof setInterval>;
     if (isCalling) {
       interval = setInterval(() => {
         setCallDuration(prev => prev + 1);
@@ -158,19 +162,55 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
     return () => clearInterval(interval);
   }, [isCalling]);
 
-  const startExport = () => {
+  const resetExportState = () => {
+    setExportProgress(0);
+    setExportError(null);
+    setIsExportProgressOpen(false);
+  };
+
+  const startExport = async () => {
     setIsExportConfigOpen(false);
     setIsExportProgressOpen(true);
     setExportProgress(0);
-    const interval = setInterval(() => {
-      setExportProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 200);
+    setExportError(null);
+
+    try {
+      // Show initial progress
+      setExportProgress(20);
+
+      // Fetch all clients with current filters applied
+      const params = {
+        page: 1,
+        limit: 1000, // Get all clients, up to reasonable limit
+        search: searchQuery || undefined,
+        industry: industryFilter || undefined,
+      };
+
+      setExportProgress(40);
+
+      const response = await clientsApi.list(params);
+
+      setExportProgress(70);
+
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+      const filename = `客户档案导出_${timestamp}`;
+
+      // Export to Excel format
+      clientExportService.exportToExcel(response.data.data, filename);
+
+      setExportProgress(100);
+
+      // Show success message
+      addToast(`成功导出 ${response.data.data.length} 个客户档案`, 'success', 3000);
+
+    } catch (error) {
+      console.error('Export failed:', error);
+      setExportError(error instanceof Error ? error.message : '导出失败，请重试');
+      setExportProgress(0);
+
+      addToast('导出失败，请重试', 'error', 5000);
+    }
   };
 
   const getStatusStyle = (status: string) => {
@@ -181,16 +221,6 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
       default: return 'bg-slate-50 text-slate-600 border-slate-100';
     }
   };
-
-  if (selectedCustomerId) {
-    return (
-      <CustomerDetailView 
-        customerId={selectedCustomerId} 
-        onBack={() => setSelectedCustomerId(null)} 
-        onViewChange={onViewChange}
-      />
-    );
-  }
 
   return (
     <motion.div 
@@ -271,7 +301,7 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
               {customers.map((customer) => (
                 <tr 
                   key={customer.id} 
-                  onClick={() => setSelectedCustomerId(customer.id)}
+                  onClick={() => onViewChange('crm', { customerId: customer.id })}
                   className="hover:bg-slate-50/50 transition-colors group cursor-pointer"
                 >
                   <td className="px-8 py-6">
@@ -460,11 +490,24 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
                         className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none appearance-none"
                       >
                         <option value="">请选择行业</option>
-                        <option value="金融科技">金融科技</option>
-                        <option value="人工智能">人工智能</option>
-                        <option value="电子商务">电子商务</option>
-                        <option value="文化创意">文化创意</option>
-                        <option value="传统制造">传统制造</option>
+                        {isLoadingIndustries ? (
+                          <option disabled>加载中...</option>
+                        ) : industries.length > 0 ? (
+                          industries.map(industry => (
+                            <option key={industry.id} value={industry.name}>
+                              {industry.name}
+                            </option>
+                          ))
+                        ) : (
+                          // Fallback to hardcoded options if no dictionary data
+                          <>
+                            <option value="金融科技">金融科技</option>
+                            <option value="人工智能">人工智能</option>
+                            <option value="电子商务">电子商务</option>
+                            <option value="文化创意">文化创意</option>
+                            <option value="传统制造">传统制造</option>
+                          </>
+                        )}
                       </select>
                     </div>
                     <div className="space-y-1.5">
@@ -474,11 +517,24 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
                         className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none appearance-none"
                       >
                         <option value="">请选择规模</option>
-                        <option value="少于50人">少于50人</option>
-                        <option value="50-100人">50-100人</option>
-                        <option value="100-500人">100-500人</option>
-                        <option value="500-1000人">500-1000人</option>
-                        <option value="1000人以上">1000人以上</option>
+                        {isLoadingCompanySizes ? (
+                          <option disabled>加载中...</option>
+                        ) : companySizes.length > 0 ? (
+                          companySizes.map(size => (
+                            <option key={size.id} value={size.name}>
+                              {size.name}
+                            </option>
+                          ))
+                        ) : (
+                          // Fallback to hardcoded options if no dictionary data
+                          <>
+                            <option value="少于50人">少于50人</option>
+                            <option value="50-100人">50-100人</option>
+                            <option value="100-500人">100-500人</option>
+                            <option value="500-1000人">500-1000人</option>
+                            <option value="1000人以上">1000人以上</option>
+                          </>
+                        )}
                       </select>
                     </div>
                   </div>
@@ -658,7 +714,7 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
                 <div className="space-y-3">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">包含字段</label>
                   <div className="flex flex-wrap gap-2">
-                    {['基本信息', '联系方式', '业务标签', '互动记录', '调研摘要'].map((field, i) => (
+                    {['基本信息', '联系方式', '业务标签', '互动记录', '调研摘要'].map((field, _i) => (
                       <div key={field} className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600">
                         <input type="checkbox" defaultChecked className="accent-indigo-600" />
                         {field}
@@ -695,7 +751,7 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => exportProgress === 100 && setIsExportProgressOpen(false)}
+              onClick={() => (exportProgress === 100 || exportError) && resetExportState()}
               className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
             />
             <motion.div 
@@ -704,32 +760,54 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
               exit={{ scale: 0.9, opacity: 0 }}
               className="relative w-full max-w-md bg-white rounded-[32px] shadow-2xl p-8 text-center"
             >
-              <div className="w-20 h-20 bg-indigo-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-indigo-600">
-                <Download className={cn("w-10 h-10", exportProgress < 100 && "animate-bounce")} />
+              <div className={cn(
+                "w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6",
+                exportError ? "bg-red-50 text-red-600" : "bg-indigo-50 text-indigo-600"
+              )}>
+                <Download className={cn(
+                  "w-10 h-10",
+                  exportProgress < 100 && !exportError && "animate-bounce"
+                )} />
               </div>
               <h2 className="text-2xl font-bold text-slate-900 mb-2">
-                {exportProgress < 100 ? '正在准备导出数据...' : '数据导出成功!'}
+                {exportError
+                  ? '导出失败'
+                  : exportProgress < 100
+                    ? '正在准备导出数据...'
+                    : '数据导出成功!'
+                }
               </h2>
               <p className="text-slate-500 text-sm mb-8">
-                {exportProgress < 100 
-                  ? `正在打包 ${customers.length} 个客户档案，请稍候。` 
-                  : '您的客户档案数据已准备就绪，Excel 文件已自动开始下载。'}
+                {exportError
+                  ? exportError
+                  : exportProgress < 100
+                    ? `正在获取和打包客户档案数据，请稍候。`
+                    : '您的客户档案数据已准备就绪，Excel 文件已自动开始下载。'
+                }
               </p>
 
               <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mb-8">
-                <motion.div 
+                <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${exportProgress}%` }}
-                  className="h-full bg-indigo-600"
+                  className={cn(
+                    "h-full",
+                    exportError ? "bg-red-500" : "bg-indigo-600"
+                  )}
                 />
               </div>
 
-              {exportProgress === 100 ? (
-                <button 
-                  onClick={() => setIsExportProgressOpen(false)}
-                  className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+              {exportProgress === 100 || exportError ? (
+                <button
+                  onClick={() => resetExportState()}
+                  className={cn(
+                    "w-full py-4 text-white rounded-2xl font-bold transition-all shadow-lg",
+                    exportError
+                      ? "bg-red-600 hover:bg-red-700 shadow-red-100"
+                      : "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100"
+                  )}
                 >
-                  完成并关闭
+                  {exportError ? '关闭' : '完成并关闭'}
                 </button>
               ) : (
                 <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
@@ -916,10 +994,15 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
                 <div className="space-y-3">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">企业规模</label>
                   <div className="grid grid-cols-2 gap-2">
-                    {['少于50人', '50-100人', '100-500人', '500人以上'].map(size => (
-                      <label key={size} className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100 cursor-pointer hover:bg-slate-100 transition-all">
+                    {(isLoadingCompanySizes ? [] : companySizes.length > 0 ? companySizes : [
+                      { id: 'fallback-1', name: '少于50人' },
+                      { id: 'fallback-2', name: '50-100人' },
+                      { id: 'fallback-3', name: '100-500人' },
+                      { id: 'fallback-4', name: '500人以上' }
+                    ]).map(size => (
+                      <label key={size.id} className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100 cursor-pointer hover:bg-slate-100 transition-all">
                         <input type="checkbox" className="accent-indigo-600" />
-                        <span className="text-xs text-slate-600 font-medium">{size}</span>
+                        <span className="text-xs text-slate-600 font-medium">{size.name}</span>
                       </label>
                     ))}
                   </div>
@@ -927,11 +1010,28 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
 
                 <div className="space-y-3">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">所属行业</label>
-                  <select className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none appearance-none">
-                    <option>全部行业</option>
-                    <option>金融科技</option>
-                    <option>人工智能</option>
-                    <option>电子商务</option>
+                  <select
+                    value={industryFilter}
+                    onChange={(e) => setIndustryFilter(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none appearance-none"
+                  >
+                    <option value="">全部行业</option>
+                    {isLoadingIndustries ? (
+                      <option disabled>加载中...</option>
+                    ) : industries.length > 0 ? (
+                      industries.map(industry => (
+                        <option key={industry.id} value={industry.name}>
+                          {industry.name}
+                        </option>
+                      ))
+                    ) : (
+                      // Fallback to hardcoded options if no dictionary data
+                      <>
+                        <option>金融科技</option>
+                        <option>人工智能</option>
+                        <option>电子商务</option>
+                      </>
+                    )}
                   </select>
                 </div>
               </div>

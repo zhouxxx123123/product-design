@@ -212,8 +212,33 @@ const SurveyInsightsView: React.FC = () => {
     if (!sessionId || isExporting) return;
     setIsExporting(true);
     try {
-      await reportApi.startExport(sessionId);
-      // Use axios (via reportApi.download) so the Bearer token interceptor fires
+      const { data: job } = await reportApi.startExport(sessionId);
+
+      // Poll until done or failed — iterative loop (avoids call-stack overflow)
+      const maxAttempts = 30;
+      const pollInterval = 2000;
+      let jobDone = false;
+
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        let jobDetail;
+        try {
+          const res = await reportApi.pollJobStatus(job.jobId);
+          jobDetail = res.data;
+        } catch {
+          // Network error during poll — wait and retry rather than aborting
+          await new Promise<void>((resolve) => setTimeout(resolve, pollInterval));
+          continue;
+        }
+        if (jobDetail.status === 'done') { jobDone = true; break; }
+        if (jobDetail.status === 'failed') {
+          throw new Error(jobDetail.error ?? '报告生成失败');
+        }
+        await new Promise<void>((resolve) => setTimeout(resolve, pollInterval));
+      }
+
+      if (!jobDone) throw new Error('报告生成超时，请稍后重试');
+
+      // Download the report
       const { data: blob } = await reportApi.download(sessionId);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -225,14 +250,17 @@ const SurveyInsightsView: React.FC = () => {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error('PDF导出失败', err);
-      useToastStore.getState().addToast('报告导出失败，请稍后重试', 'error');
+      useToastStore.getState().addToast(
+        err instanceof Error ? err.message : '报告导出失败，请稍后重试',
+        'error'
+      );
     } finally {
       setIsExporting(false);
     }
   };
 
   const handleGenerateInsights = async () => {
-    if (!sessionId || transcript.length === 0) return;
+    if (!sessionId || transcript.length === 0 || isGenerating) return;
     setIsGenerating(true);
     try {
       await insightsApi.extractFromSession(sessionId);
@@ -293,7 +321,7 @@ const SurveyInsightsView: React.FC = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={handleGenerateInsights}
-              disabled={isGenerating || !sessionId}
+              disabled={isGenerating || !sessionId || transcript.length === 0}
               className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isGenerating ? (

@@ -24,11 +24,11 @@ export enum InterviewStatus {
  * 核心业务表，包含三层信息模型
  */
 @Entity('interview_sessions')
-@Index(['tenant_id', 'interview_date'])
-@Index(['client_id'])
-@Index(['interviewer_id'])
+@Index(['tenantId', 'interviewDate'])
+@Index(['clientId'])
+@Index(['interviewerId'])
 @Index(['status'])
-@Index(['tenant_id', 'status', 'interview_date'])
+@Index(['tenantId', 'status', 'interviewDate'])
 export class InterviewSessionEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -84,6 +84,9 @@ export class InterviewSessionEntity {
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   language: string | null;
+
+  @Column({ type: 'uuid', name: 'recording_file_id', nullable: true })
+  recordingFileId: string | null;
 
   @Column({ type: 'timestamptz', name: 'started_at', nullable: true })
   startedAt: Date | null;

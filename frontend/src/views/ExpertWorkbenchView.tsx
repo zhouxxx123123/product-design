@@ -116,8 +116,8 @@ const ExpertWorkbenchView: React.FC = () => {
     salesPerson: s.interviewerId ?? '未分配',
     assignedAt: s.interviewDate ?? s.createdAt.slice(0, 16).replace('T', ' '),
     status: mapApiStatus(s.status),
-    insightsCount: 0,
-    commentsCount: 0,
+    insightsCount: s.insightsCount ?? 0,
+    commentsCount: s.commentsCount ?? 0,
   }));
 
   // ── Mutations ──────────────────────────────────────────────────────────────

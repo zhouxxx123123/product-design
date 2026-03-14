@@ -8,6 +8,7 @@ import { outlineApi } from '../services/outline';
 import { clientsApi } from '../services/clients';
 import { sessionCollabApi } from '../services/sessions-collab';
 import { casesApi } from '../services/cases';
+import { uploadFile, type UploadedFileInfo } from '../services/storage';
 import { useInsightExtract } from '../hooks/useInsightExtract';
 import { useWorkspaceSession } from '../hooks/useWorkspaceSession';
 import {
@@ -78,7 +79,7 @@ const SurveyWorkspaceView: React.FC<SurveyWorkspaceProps> = ({ onBack, onViewCha
   const [activeTab, setActiveTab] = useState<'chat' | 'transcript' | 'notes' | 'files'>('chat');
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [aiSuggestions, _setAiSuggestions] = useState<{ id: number; type: string; text: string; icon: React.ComponentType<{ className?: string }> }[]>([]);
-  const [uploadedFiles, setUploadedFiles] = useState<{name: string, size: string, type: string}[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<{uid: string, name: string, size: string, type: string, uploadedInfo?: UploadedFileInfo}[]>([]);
   const [transcript, setTranscript] = useState<{time: string, speaker: string, text: string}[]>([]);
 
   const [noteInput, setNoteInput] = useState('');
@@ -334,21 +335,36 @@ const SurveyWorkspaceView: React.FC<SurveyWorkspaceProps> = ({ onBack, onViewCha
                   <Link className="w-3.5 h-3.5 text-indigo-600" />
                   引用附件
                 </button>
-                <input 
-                  id="file-upload" 
-                  type="file" 
-                  className="hidden" 
-                  onChange={(e) => {
+                <input
+                  id="file-upload"
+                  type="file"
+                  className="hidden"
+                  onChange={async (e) => {
                     const file = e.target.files?.[0];
-                    if (file) {
-                      setUploadedFiles(prev => [...prev, { 
-                        name: file.name, 
-                        size: `${(file.size / 1024 / 1024).toFixed(1)} MB`, 
-                        type: file.name.split('.').pop() || 'file' 
-                      }]);
-                      setActiveTab('files');
+                    if (!file) return;
+                    e.target.value = '';
+                    // Use a stable uid so concurrent uploads with same filename don't collide
+                    const uid = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+                    const localEntry = {
+                      uid,
+                      name: file.name,
+                      size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
+                      type: file.name.split('.').pop() ?? 'file',
+                    };
+                    setUploadedFiles((prev) => [...prev, localEntry]);
+                    setActiveTab('files');
+                    try {
+                      const uploaded = await uploadFile(file);
+                      // Update the entry by stable uid (immutable replace)
+                      setUploadedFiles((prev) =>
+                        prev.map((f) => (f.uid === uid ? { ...f, uploadedInfo: uploaded } : f))
+                      );
+                    } catch (err) {
+                      console.error('文件上传失败:', err);
+                      // Remove failed entry by stable uid
+                      setUploadedFiles((prev) => prev.filter((f) => f.uid !== uid));
                     }
-                  }} 
+                  }}
                 />
                 <div className="w-px h-4 bg-slate-200 mx-1" />
                 {/* 音频文件上传 → ASR 识别 */}
@@ -430,8 +446,8 @@ const SurveyWorkspaceView: React.FC<SurveyWorkspaceProps> = ({ onBack, onViewCha
             <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
               {activeTab === 'files' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {uploadedFiles.map((file, i) => (
-                    <div key={i} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center gap-4 group hover:border-indigo-200 transition-all cursor-pointer">
+                  {uploadedFiles.map((file) => (
+                    <div key={file.uid} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center gap-4 group hover:border-indigo-200 transition-all cursor-pointer">
                       <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-indigo-600 shadow-sm">
                         <FileText className="w-5 h-5" />
                       </div>

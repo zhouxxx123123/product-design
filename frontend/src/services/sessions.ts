@@ -21,6 +21,8 @@ export interface Session {
   interviewerId?: string;
   plannedDurationMinutes?: number;
   recordingUrl?: string;
+  insightsCount?: number;
+  commentsCount?: number;
 }
 
 export interface CreateSessionDto {

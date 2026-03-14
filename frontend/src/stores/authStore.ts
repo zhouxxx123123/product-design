@@ -12,8 +12,8 @@ interface User {
 
 interface AuthState {
   user: User | null;
-  accessToken: string | null;      // persisted to localStorage
-  refreshToken: string | null;     // persisted to localStorage
+  accessToken: string | null;      // memory-only, NOT persisted
+  refreshToken: string | null;     // memory-only, NOT persisted
   isLoggedIn: boolean;
   setAuth: (user: User, accessToken: string, refreshToken: string) => void;
   clearAuth: () => void;
@@ -34,8 +34,7 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         user: state.user,
         isLoggedIn: state.isLoggedIn,
-        accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
+        // accessToken and refreshToken are NOT persisted for security
       }),
     },
   ),

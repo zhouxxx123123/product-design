@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -6,7 +6,7 @@ import { transcriptApi, TranscriptSegment as ApiSegment } from '../services/tran
 import { useToastStore } from '../stores/toastStore';
 import { insightsApi, Insight as ApiInsight } from '../services/insights';
 import { reportApi } from '../services/report';
-import { casesApi, Case } from '../services/cases';
+import { casesApi, Case, SimilarCase } from '../services/cases';
 import { sessionsApi } from '../services/sessions';
 import {
   FileText,
@@ -134,15 +134,29 @@ const SurveyInsightsView: React.FC = () => {
     enabled: !!sessionId,
   });
 
-  const { data: casesData } = useQuery({
-    queryKey: ['cases', { page: 1, limit: 10 }],
-    queryFn: () => casesApi.list({ page: 1, limit: 10 }).then((r) => r.data),
-  });
-
-  const cases: Case[] = casesData?.data ?? [];
-
   const transcript: TranscriptSegment[] = rawTranscript.map(mapSegment);
   const insights: Insight[] = rawInsights.map(mapInsight);
+
+  // Build the query text from all insights combined — memoized to prevent unnecessary re-fetches
+  const similarQueryText = useMemo(
+    () =>
+      insights.length > 0
+        ? insights
+            .filter((i) => i.layer === 3 || i.layer === 2)
+            .map((i) => `${i.title}: ${i.content}`)
+            .join('\n')
+            .slice(0, 2000)
+        : null,
+    [insights],
+  );
+
+  const { data: similarCases = [], isLoading: isSimilarLoading } = useQuery({
+    queryKey: ['cases-similar', similarQueryText],
+    queryFn: () =>
+      casesApi.similar({ text: similarQueryText!, limit: 10 }).then((r) => r.data),
+    enabled: !!similarQueryText && activeTab === 'cases',
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
   // ── Audio wiring ───────────────────────────────────────────────────────────
 
@@ -695,28 +709,51 @@ const SurveyInsightsView: React.FC = () => {
           {/* ── Cases tab ── */}
           {activeTab === 'cases' && (
             <div className="max-w-4xl mx-auto">
-              <h3 className="text-lg font-bold text-slate-900 mb-4">相似案例推荐</h3>
-              {cases.length === 0 ? (
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">相似案例推荐</h3>
+                  <p className="text-sm text-slate-500 mt-0.5">
+                    {similarQueryText
+                      ? '基于本次调研洞察，通过语义向量相似度推荐的案例'
+                      : '生成洞察后自动推荐相似案例'}
+                  </p>
+                </div>
+                {isSimilarLoading && (
+                  <div className="flex items-center gap-2 text-slate-500 text-sm">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    搜索中...
+                  </div>
+                )}
+              </div>
+
+              {!similarQueryText ? (
+                <div className="flex flex-col items-center justify-center py-24 text-slate-400">
+                  <Sparkles className="w-16 h-16 mb-4 opacity-30" />
+                  <p className="text-lg font-medium">请先生成洞察</p>
+                  <p className="text-sm mt-1">洞察内容将用于语义匹配相似案例</p>
+                </div>
+              ) : similarCases.length === 0 && !isSimilarLoading ? (
                 <div className="flex flex-col items-center justify-center py-24 text-slate-400">
                   <Briefcase className="w-16 h-16 mb-4 opacity-30" />
                   <p className="text-lg font-medium">暂无相似案例</p>
-                  <p className="text-sm mt-1">案例库正在建设中</p>
+                  <p className="text-sm mt-1">案例库尚未收录相关内容，可以创建新案例</p>
                 </div>
               ) : (
                 <div className="grid gap-4">
-                  {cases.map((c) => (
+                  {similarCases.map((c, index) => (
                     <motion.div
                       key={c.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
                       className="bg-white rounded-2xl border border-slate-200 p-6 hover:border-indigo-200 hover:shadow-sm transition-all cursor-pointer group"
                     >
                       <div className="flex items-start justify-between mb-3">
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
                             {c.title}
                           </h4>
-                          <div className="flex items-center gap-2 mt-1">
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
                             {c.industry && (
                               <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-lg text-xs font-medium">
                                 {c.industry}
@@ -729,12 +766,28 @@ const SurveyInsightsView: React.FC = () => {
                             ))}
                           </div>
                         </div>
-                        <span className={cn(
-                          "px-2 py-1 rounded-full text-[10px] font-bold",
-                          c.status === 'published' ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-500"
-                        )}>
-                          {c.status === 'published' ? '已发布' : c.status}
-                        </span>
+                        <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                          {/* Similarity score badge */}
+                          <div className="flex flex-col items-center">
+                            <span className="text-xs text-slate-400 mb-0.5">相似度</span>
+                            <div className={cn(
+                              "px-2 py-1 rounded-lg text-xs font-bold",
+                              c.similarity >= 0.8
+                                ? "bg-emerald-50 text-emerald-600"
+                                : c.similarity >= 0.6
+                                ? "bg-indigo-50 text-indigo-600"
+                                : "bg-slate-100 text-slate-500"
+                            )}>
+                              {Math.round(c.similarity * 100)}%
+                            </div>
+                          </div>
+                          <span className={cn(
+                            "px-2 py-1 rounded-full text-[10px] font-bold",
+                            c.status === 'published' ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-500"
+                          )}>
+                            {c.status === 'published' ? '已发布' : c.status}
+                          </span>
+                        </div>
                       </div>
                       {c.summary && (
                         <p className="text-sm text-slate-600 leading-relaxed line-clamp-2 mb-3">

@@ -21,6 +21,10 @@ export interface Case {
   updatedAt: string;
 }
 
+export interface SimilarCase extends Case {
+  similarity: number; // cosine similarity score (0–1, higher is more similar)
+}
+
 export interface CreateCaseDto {
   title: string;
   industry?: string;
@@ -45,4 +49,6 @@ export const casesApi = {
   create: (dto: CreateCaseDto) => http.post<Case>('/cases', dto),
   update: (id: string, dto: UpdateCaseDto) => http.patch<Case>(`/cases/${id}`, dto),
   delete: (id: string) => http.delete(`/cases/${id}`),
+  similar: (params: { text: string; limit?: number }) =>
+    http.get<SimilarCase[]>('/cases/similar', { params }),
 };

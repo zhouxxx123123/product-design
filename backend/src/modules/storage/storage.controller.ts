@@ -75,11 +75,22 @@ export class StorageController {
   }
 
   @Get(':fileId')
-  async download(@Param('fileId') fileId: string, @Res() res: Response) {
+  async download(
+    @Param('fileId') fileId: string,
+    @Req() req: { user: { tenantId: string } },
+    @Res() res: Response,
+  ) {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(fileId)) {
       throw new BadRequestException('Invalid file ID');
     }
+
+    // Verify the file exists and belongs to the requesting user's tenant
+    const fileRecord = await this.storageService.findFileById(fileId, req.user.tenantId);
+    if (!fileRecord) {
+      throw new NotFoundException(`文件 ${fileId} 不存在`);
+    }
+
     const filename = this.storageService.getFilePath(fileId);
     if (!filename) {
       throw new NotFoundException(`文件 ${fileId} 不存在`);

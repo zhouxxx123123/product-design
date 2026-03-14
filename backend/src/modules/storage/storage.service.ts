@@ -76,6 +76,17 @@ export class StorageService {
     });
   }
 
+  async findFileById(fileId: string, tenantId: string): Promise<StorageFileEntity | null> {
+    return this.storageFileRepository.findOne({
+      where: {
+        fileId,
+        tenantId,
+        deletedAt: IsNull(),
+        isExpired: false,
+      },
+    });
+  }
+
   async softDeleteFile(fileId: string, tenantId: string): Promise<{ success: boolean }> {
     const result = await this.storageFileRepository.softDelete({
       fileId,

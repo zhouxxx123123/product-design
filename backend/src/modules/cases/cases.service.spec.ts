@@ -1,9 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException } from '@nestjs/common';
+import { HttpService } from '@nestjs/axios';
 
 import { CasesService } from './cases.service';
 import { CaseEntity, CaseType, CaseStatus } from '../../entities/case.entity';
+import { CaseRepository } from '../case/repositories/case.repository';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -66,12 +68,26 @@ const makeMockRepo = () => ({
 describe('CasesService', () => {
   let service: CasesService;
   let caseRepo: ReturnType<typeof makeMockRepo>;
+  let mockCaseRepository: any;
+  let mockHttpService: any;
 
   beforeEach(async () => {
     caseRepo = makeMockRepo();
+    mockCaseRepository = {
+      findSimilar: jest.fn().mockResolvedValue([]),
+    };
+    mockHttpService = {
+      get: jest.fn(),
+      post: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [CasesService, { provide: getRepositoryToken(CaseEntity), useValue: caseRepo }],
+      providers: [
+        CasesService,
+        { provide: getRepositoryToken(CaseEntity), useValue: caseRepo },
+        { provide: CaseRepository, useValue: mockCaseRepository },
+        { provide: HttpService, useValue: mockHttpService },
+      ],
     }).compile();
 
     service = module.get<CasesService>(CasesService);

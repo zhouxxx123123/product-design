@@ -4,6 +4,7 @@ import { NotFoundException } from '@nestjs/common';
 
 import { ClientsService } from './clients.service';
 import { ClientProfileEntity } from '../../entities/client-profile.entity';
+import { ClientContactEntity } from '../../entities/client-contact.entity';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -50,6 +51,7 @@ const makeMockRepo = () => ({
     leftJoinAndSelect: jest.fn().mockReturnThis(),
     select: jest.fn().mockReturnThis(),
     orderBy: jest.fn().mockReturnThis(),
+    addOrderBy: jest.fn().mockReturnThis(),
     skip: jest.fn().mockReturnThis(),
     take: jest.fn().mockReturnThis(),
     getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
@@ -63,14 +65,17 @@ const makeMockRepo = () => ({
 describe('ClientsService', () => {
   let service: ClientsService;
   let clientRepo: ReturnType<typeof makeMockRepo>;
+  let contactRepo: ReturnType<typeof makeMockRepo>;
 
   beforeEach(async () => {
     clientRepo = makeMockRepo();
+    contactRepo = makeMockRepo();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ClientsService,
         { provide: getRepositoryToken(ClientProfileEntity), useValue: clientRepo },
+        { provide: getRepositoryToken(ClientContactEntity), useValue: contactRepo },
       ],
     }).compile();
 
@@ -125,6 +130,8 @@ describe('ClientsService', () => {
       const client = makeClient();
       clientRepo.create.mockReturnValue(client);
       clientRepo.save.mockResolvedValue(client);
+      // Mock the reload of client with contacts
+      clientRepo.findOne.mockResolvedValue(client);
 
       await service.create(TENANT_ID, dto);
 
@@ -132,9 +139,13 @@ describe('ClientsService', () => {
         expect.objectContaining({
           industry: dto.industry,
           company: dto.companyName,
-          email: dto.contacts[0].email,
-          phone: dto.contacts[0].phone,
-          position: dto.contacts[0].title,
+          name: dto.companyName, // company name is used as name
+          email: null, // contact fields are null on client entity
+          phone: null,
+          position: null,
+          tags: dto.tags,
+          notes: dto.notes,
+          tenantId: TENANT_ID,
         }),
       );
     });

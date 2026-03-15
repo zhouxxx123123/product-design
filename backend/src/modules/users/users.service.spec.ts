@@ -5,6 +5,7 @@ import * as bcrypt from 'bcrypt';
 
 import { UsersService } from './users.service';
 import { UserEntity, UserRole } from '../../entities/user.entity';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -62,12 +63,20 @@ const makeMockRepo = () => ({
 describe('UsersService', () => {
   let service: UsersService;
   let userRepo: ReturnType<typeof makeMockRepo>;
+  let auditLogsService: jest.Mocked<AuditLogsService>;
 
   beforeEach(async () => {
     userRepo = makeMockRepo();
+    auditLogsService = {
+      create: jest.fn().mockResolvedValue({}),
+    } as any;
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [UsersService, { provide: getRepositoryToken(UserEntity), useValue: userRepo }],
+      providers: [
+        UsersService,
+        { provide: getRepositoryToken(UserEntity), useValue: userRepo },
+        { provide: AuditLogsService, useValue: auditLogsService },
+      ],
     }).compile();
 
     service = module.get<UsersService>(UsersService);
@@ -79,7 +88,7 @@ describe('UsersService', () => {
 
   describe('create()', () => {
     it('hashes the password before saving', async () => {
-      const dto = { email: 'new@example.com', password: 'plain-password' };
+      const dto = { email: 'new@example.com', displayName: 'New User', password: 'plain-password' };
       const user = makeUser({ email: dto.email });
       userRepo.create.mockReturnValue(user);
       userRepo.save.mockResolvedValue(user);
@@ -92,7 +101,7 @@ describe('UsersService', () => {
     });
 
     it('sets tenantId from parameter, not from DTO', async () => {
-      const dto = { email: 'new@example.com', password: 'secret123' };
+      const dto = { email: 'new@example.com', displayName: 'New User', password: 'secret123' };
       const user = makeUser();
       userRepo.create.mockReturnValue(user);
       userRepo.save.mockResolvedValue(user);
@@ -105,7 +114,7 @@ describe('UsersService', () => {
     });
 
     it('defaults role to SALES when not provided', async () => {
-      const dto = { email: 'new@example.com', password: 'secret123' };
+      const dto = { email: 'new@example.com', displayName: 'New User', password: 'secret123' };
       const user = makeUser();
       userRepo.create.mockReturnValue(user);
       userRepo.save.mockResolvedValue(user);
@@ -118,7 +127,7 @@ describe('UsersService', () => {
     });
 
     it('uses provided role when given', async () => {
-      const dto = { email: 'admin@example.com', password: 'secret123', role: UserRole.ADMIN };
+      const dto = { email: 'admin@example.com', displayName: 'Admin User', password: 'secret123', role: UserRole.ADMIN };
       const user = makeUser({ role: UserRole.ADMIN });
       userRepo.create.mockReturnValue(user);
       userRepo.save.mockResolvedValue(user);
@@ -131,14 +140,20 @@ describe('UsersService', () => {
     });
 
     it('returns the saved user entity', async () => {
-      const dto = { email: 'new@example.com', password: 'secret123' };
+      const dto = { email: 'new@example.com', displayName: 'New User', password: 'secret123' };
       const user = makeUser();
       userRepo.create.mockReturnValue(user);
       userRepo.save.mockResolvedValue(user);
 
       const result = await service.create(TENANT_ID, dto);
 
-      expect(result).toBe(user);
+      expect(result).toEqual(expect.objectContaining({
+        id: user.id,
+        email: user.email,
+        displayName: user.displayName,
+        role: user.role,
+        tenantId: user.tenantId,
+      }));
     });
   });
 
@@ -154,7 +169,15 @@ describe('UsersService', () => {
       const result = await service.findAll(TENANT_ID, { page: 1, limit: 10 });
 
       expect(result).toEqual({
-        data: users,
+        data: [expect.objectContaining({
+          id: users[0].id,
+          email: users[0].email,
+          displayName: users[0].displayName,
+          role: users[0].role,
+          tenantId: users[0].tenantId,
+          isActive: users[0].isActive,
+          createdAt: users[0].createdAt,
+        })],
         total: 1,
         page: 1,
         limit: 10,
@@ -229,7 +252,15 @@ describe('UsersService', () => {
       expect(userRepo.findOne).toHaveBeenCalledWith(
         expect.objectContaining({ where: { id: USER_ID } }),
       );
-      expect(result).toBe(user);
+      expect(result).toEqual(expect.objectContaining({
+        id: user.id,
+        email: user.email,
+        displayName: user.displayName,
+        role: user.role,
+        tenantId: user.tenantId,
+        isActive: user.isActive,
+        createdAt: user.createdAt,
+      }));
     });
 
     it('throws NotFoundException when user is not found', async () => {
@@ -271,7 +302,7 @@ describe('UsersService', () => {
       userRepo.findOne.mockResolvedValue(user);
       userRepo.save.mockImplementation((entity) => Promise.resolve(entity));
 
-      const result = await service.update(USER_ID, TENANT_ID, { displayName: 'New Name' });
+      const result = await service.update(USER_ID, TENANT_ID, { displayName: 'New Name' }, UserRole.ADMIN);
 
       expect(result.displayName).toBe('New Name');
       expect(userRepo.save).toHaveBeenCalled();
@@ -281,7 +312,7 @@ describe('UsersService', () => {
       userRepo.findOne.mockResolvedValue(null);
 
       await expect(
-        service.update('nonexistent-id', TENANT_ID, { displayName: 'X' }),
+        service.update('nonexistent-id', TENANT_ID, { displayName: 'X' }, UserRole.ADMIN),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -290,7 +321,7 @@ describe('UsersService', () => {
       userRepo.findOne.mockResolvedValue(user);
       userRepo.save.mockImplementation((entity) => Promise.resolve(entity));
 
-      await service.update(USER_ID, TENANT_ID, { password: 'new-plain-password' });
+      await service.update(USER_ID, TENANT_ID, { password: 'new-plain-password' }, UserRole.ADMIN);
 
       const savedUser = userRepo.save.mock.calls[0][0] as UserEntity;
       expect(savedUser.password).not.toBe('new-plain-password');
@@ -303,7 +334,7 @@ describe('UsersService', () => {
       userRepo.findOne.mockResolvedValue(user);
       userRepo.save.mockImplementation((entity) => Promise.resolve(entity));
 
-      await service.update(USER_ID, TENANT_ID, { displayName: 'Name Only' });
+      await service.update(USER_ID, TENANT_ID, { displayName: 'Name Only' }, UserRole.SALES);
 
       const savedUser = userRepo.save.mock.calls[0][0] as UserEntity;
       expect(savedUser.password).toBe(originalHash);
@@ -314,7 +345,7 @@ describe('UsersService', () => {
       userRepo.findOne.mockResolvedValue(user);
       userRepo.save.mockImplementation((entity) => Promise.resolve(entity));
 
-      const result = await service.update(USER_ID, TENANT_ID, { role: UserRole.EXPERT });
+      const result = await service.update(USER_ID, TENANT_ID, { role: UserRole.EXPERT }, UserRole.ADMIN);
 
       expect(result.role).toBe(UserRole.EXPERT);
     });
@@ -324,7 +355,7 @@ describe('UsersService', () => {
       userRepo.findOne.mockResolvedValue(user);
       userRepo.save.mockImplementation((entity) => Promise.resolve(entity));
 
-      const result = await service.update(USER_ID, TENANT_ID, { isActive: false });
+      const result = await service.update(USER_ID, TENANT_ID, { isActive: false }, UserRole.ADMIN);
 
       expect(result.isActive).toBe(false);
     });
@@ -358,6 +389,41 @@ describe('UsersService', () => {
       userRepo.findOne.mockResolvedValue(null);
 
       await expect(service.softDelete(USER_ID, 'other-tenant')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ── changeRole ────────────────────────────────────────────────────────────
+
+  describe('changeRole()', () => {
+    it('changes user role and creates audit log', async () => {
+      const user = makeUser({ role: UserRole.SALES });
+      const updatedUser = makeUser({ role: UserRole.EXPERT });
+      userRepo.findOne.mockResolvedValue(user);
+      userRepo.save.mockResolvedValue(updatedUser);
+
+      const result = await service.changeRole(USER_ID, TENANT_ID, UserRole.EXPERT, 'admin-uuid');
+
+      expect(userRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ role: UserRole.EXPERT }),
+      );
+      expect(auditLogsService.create).toHaveBeenCalledWith({
+        action: expect.any(String), // AuditAction.UPDATE
+        entityType: 'user',
+        entityId: USER_ID,
+        tenantId: TENANT_ID,
+        userId: 'admin-uuid',
+        newValues: { roleChange: { from: UserRole.SALES, to: UserRole.EXPERT } },
+        notes: 'USER_ROLE_CHANGED',
+      });
+      expect(result).toEqual(expect.objectContaining({ role: UserRole.EXPERT }));
+    });
+
+    it('throws NotFoundException when user is not found', async () => {
+      userRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.changeRole('nonexistent-id', TENANT_ID, UserRole.EXPERT, 'admin-uuid'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

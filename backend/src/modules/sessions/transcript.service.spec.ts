@@ -3,6 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 
 import { TranscriptService, CreateSegmentDto } from './transcript.service';
 import { TranscriptSegmentEntity } from '../../entities/transcript-segment.entity';
+import { InterviewSessionEntity } from '../../entities/interview-session.entity';
 import { BulkCreateTranscriptSegmentDto } from './transcript.dto';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -44,14 +45,19 @@ const makeMockRepo = () => ({
 describe('TranscriptService', () => {
   let service: TranscriptService;
   let repo: ReturnType<typeof makeMockRepo>;
+  let sessionRepo: ReturnType<typeof makeMockRepo>;
 
   beforeEach(async () => {
     repo = makeMockRepo();
+    sessionRepo = makeMockRepo();
+    // Mock session existence check by default
+    sessionRepo.findOne.mockResolvedValue({ id: SESSION_ID, tenantId: TENANT_ID });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TranscriptService,
         { provide: getRepositoryToken(TranscriptSegmentEntity), useValue: repo },
+        { provide: getRepositoryToken(InterviewSessionEntity), useValue: sessionRepo },
       ],
     }).compile();
 

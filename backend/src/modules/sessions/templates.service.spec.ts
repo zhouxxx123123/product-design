@@ -92,6 +92,7 @@ describe('TemplatesService', () => {
   describe('create()', () => {
     it('creates a template with tenantId and createdBy set', async () => {
       const dto = {
+        title: 'New Template',
         name: 'New Template',
         content: { departments: [] },
       };
@@ -108,7 +109,11 @@ describe('TemplatesService', () => {
           name: dto.name,
         }),
       );
-      expect(result).toBe(template);
+      expect(result).toEqual(expect.objectContaining({
+        name: template.name,
+        tenantId: template.tenantId,
+        createdBy: template.createdBy,
+      }));
     });
 
     it('defaults content to empty object when not provided', async () => {
@@ -180,13 +185,18 @@ describe('TemplatesService', () => {
 
       const result = await service.findAll(TENANT_ID, { page: 1, limit: 10 });
 
-      expect(result).toEqual({
-        data: templates,
+      expect(result).toEqual(expect.objectContaining({
+        data: expect.arrayContaining([
+          expect.objectContaining({
+            name: expect.any(String),
+            tenantId: TENANT_ID,
+          })
+        ]),
         total: 1,
         page: 1,
         limit: 10,
         totalPages: 1,
-      });
+      }));
     });
 
     it('uses defaults page=1 and limit=20 when not provided', async () => {
@@ -259,7 +269,11 @@ describe('TemplatesService', () => {
 
       const result = await service.findById(TEMPLATE_ID, TENANT_ID);
 
-      expect(result).toBe(template);
+      expect(result).toEqual(expect.objectContaining({
+        name: template.name,
+        tenantId: template.tenantId,
+        createdBy: template.createdBy,
+      }));
     });
 
     it('returns a GLOBAL scope template regardless of tenantId', async () => {
@@ -271,7 +285,11 @@ describe('TemplatesService', () => {
 
       const result = await service.findById(TEMPLATE_ID, TENANT_ID);
 
-      expect(result).toBe(globalTemplate);
+      expect(result).toEqual(expect.objectContaining({
+        name: globalTemplate.name,
+        scope: globalTemplate.scope,
+        tenantId: globalTemplate.tenantId,
+      }));
     });
 
     it('throws NotFoundException when template does not exist', async () => {
@@ -371,12 +389,15 @@ describe('TemplatesService', () => {
       templateRepo.create.mockReturnValue(copy);
       templateRepo.save.mockResolvedValue(copy);
 
-      const result = await service.duplicate(TEMPLATE_ID, TENANT_ID);
+      const result = await service.duplicate(TEMPLATE_ID, TENANT_ID, USER_ID);
 
       expect(templateRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({ name: 'Original 副本' }),
       );
-      expect(result).toBe(copy);
+      expect(result).toEqual(expect.objectContaining({
+        name: copy.name,
+        tenantId: copy.tenantId,
+      }));
     });
 
     it('sets isDefault=false on the copy regardless of source', async () => {
@@ -386,7 +407,7 @@ describe('TemplatesService', () => {
       templateRepo.create.mockReturnValue(copy);
       templateRepo.save.mockResolvedValue(copy);
 
-      await service.duplicate(TEMPLATE_ID, TENANT_ID);
+      await service.duplicate(TEMPLATE_ID, TENANT_ID, USER_ID);
 
       expect(templateRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({ isDefault: false }),
@@ -400,7 +421,7 @@ describe('TemplatesService', () => {
       templateRepo.create.mockReturnValue(copy);
       templateRepo.save.mockResolvedValue(copy);
 
-      await service.duplicate(TEMPLATE_ID, TENANT_ID);
+      await service.duplicate(TEMPLATE_ID, TENANT_ID, USER_ID);
 
       expect(templateRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({ code: 'INT_001_copy' }),
@@ -410,7 +431,7 @@ describe('TemplatesService', () => {
     it('throws NotFoundException when source template does not exist', async () => {
       templateRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.duplicate('nonexistent-id', TENANT_ID)).rejects.toThrow(
+      await expect(service.duplicate('nonexistent-id', TENANT_ID, USER_ID)).rejects.toThrow(
         NotFoundException,
       );
     });

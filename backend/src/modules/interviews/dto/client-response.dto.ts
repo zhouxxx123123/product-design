@@ -97,7 +97,7 @@ export class ClientResponseDto {
       // Use contacts relationship if available
       dto.contacts = entity.contacts
         .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
-        .map(contact => ({
+        .map((contact) => ({
           name: contact.name,
           title: contact.position ?? undefined,
           phone: contact.phone ?? undefined,
@@ -105,7 +105,9 @@ export class ClientResponseDto {
         }));
     } else {
       // Fallback to individual fields for backwards compatibility
-      const hasContactInfo = Boolean(entity.name ?? entity.phone ?? entity.email ?? entity.position);
+      const hasContactInfo = Boolean(
+        entity.name ?? entity.phone ?? entity.email ?? entity.position,
+      );
       if (hasContactInfo) {
         dto.contacts.push({
           name: entity.name ?? '',

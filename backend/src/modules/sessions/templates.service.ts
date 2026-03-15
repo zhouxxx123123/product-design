@@ -126,14 +126,14 @@ export class TemplatesService {
   async duplicate(id: string, tenantId: string, userId: string) {
     const source = await this.getEntityById(id, tenantId);
     const copy = this.repo.create({
-      tenantId: tenantId,  // always use caller's tenantId, never source.tenantId
-      createdBy: userId,   // use current user as creator
+      tenantId: tenantId, // always use caller's tenantId, never source.tenantId
+      createdBy: userId, // use current user as creator
       name: `${source.name} 副本`,
       code: source.code ? `${source.code}_copy` : undefined,
       templateType: source.templateType,
       description: source.description,
       content: source.content,
-      scope: TemplateScope.TENANT,  // copies are always tenant-scoped
+      scope: TemplateScope.TENANT, // copies are always tenant-scoped
       tags: [...source.tags],
       variables: { ...source.variables },
       metadata: { ...source.metadata },

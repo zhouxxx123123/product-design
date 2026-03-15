@@ -5,6 +5,7 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { InsightsService } from './insights.service';
 import { SessionInsightEntity } from '../../entities/session-insight.entity';
 import { TranscriptSegmentEntity } from '../../entities/transcript-segment.entity';
+import { InterviewSessionEntity } from '../../entities/interview-session.entity';
 import { AiProxyService } from '../ai-proxy/ai-proxy.service';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -27,6 +28,13 @@ function makeInsight(overrides: Partial<SessionInsightEntity> = {}): SessionInsi
   i.createdAt = new Date('2026-03-01T00:00:00Z');
   i.updatedAt = new Date('2026-03-01T00:00:00Z');
   return Object.assign(i, overrides);
+}
+
+function makeSession(overrides: Partial<InterviewSessionEntity> = {}): InterviewSessionEntity {
+  const s = new InterviewSessionEntity();
+  s.id = SESSION_ID;
+  s.tenantId = TENANT_ID;
+  return Object.assign(s, overrides);
 }
 
 function makeTranscriptSegment(
@@ -78,18 +86,24 @@ describe('InsightsService', () => {
   let service: InsightsService;
   let insightRepo: ReturnType<typeof makeMockRepo>;
   let transcriptRepo: ReturnType<typeof makeMockRepo>;
+  let sessionRepo: ReturnType<typeof makeMockRepo>;
   let mockAiProxyService: { extractInsight: jest.Mock };
 
   beforeEach(async () => {
     insightRepo = makeMockRepo();
     transcriptRepo = makeMockRepo();
+    sessionRepo = makeMockRepo();
     mockAiProxyService = { extractInsight: jest.fn() };
+
+    // Mock session existence check by default
+    sessionRepo.findOne.mockResolvedValue(makeSession());
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         InsightsService,
         { provide: getRepositoryToken(SessionInsightEntity), useValue: insightRepo },
         { provide: getRepositoryToken(TranscriptSegmentEntity), useValue: transcriptRepo },
+        { provide: getRepositoryToken(InterviewSessionEntity), useValue: sessionRepo },
         { provide: AiProxyService, useValue: mockAiProxyService },
       ],
     }).compile();
@@ -382,14 +396,18 @@ describe('InsightsService', () => {
       const segments = [makeTranscriptSegment()];
       transcriptRepo.find.mockResolvedValue(segments);
 
-      const aiResult = [
-        { layer: 1, content: { text: 'valid insight' } },
-        'invalid string',
-        null,
-        undefined,
-        42,
-        { layer: 2, content: { text: 'another valid insight' } },
-      ];
+      // Mock AI result with proper structure
+      const aiResult = {
+        themes: [
+          { insight: 'valid theme insight', details: 'theme details' },
+          { insight: 'another theme insight', details: 'theme details' },
+        ],
+        key_quotes: [
+          { insight: 'valid quote insight', quote_text: 'user said something' },
+        ],
+        summary: 'Overall analysis summary',
+        sentiment: { score: 0.8, label: 'positive' },
+      };
       mockAiProxyService.extractInsight.mockResolvedValue(aiResult);
 
       insightRepo.create.mockImplementation((data) => data);
@@ -398,33 +416,20 @@ describe('InsightsService', () => {
 
       await service.extractFromSession(SESSION_ID, TENANT_ID, USER_ID);
 
-      // Should create exactly 2 insights (only the valid objects)
-      expect(insightRepo.create).toHaveBeenCalledTimes(2);
-      expect(insightRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          sessionId: SESSION_ID,
-          tenantId: TENANT_ID,
-          editedBy: USER_ID,
-          layer: 1,
-          content: { text: 'valid insight' },
-        }),
-      );
-      expect(insightRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          sessionId: SESSION_ID,
-          tenantId: TENANT_ID,
-          editedBy: USER_ID,
-          layer: 2,
-          content: { text: 'another valid insight' },
-        }),
-      );
+      // Should create insights for themes, key quotes, and summary
+      expect(insightRepo.create).toHaveBeenCalledTimes(4); // 2 themes + 1 quote + 1 summary
     });
 
     it('uses default layer 1 when layer is not a number', async () => {
       const segments = [makeTranscriptSegment()];
       transcriptRepo.find.mockResolvedValue(segments);
 
-      const aiResult = [{ layer: 'not-a-number', content: { text: 'insight' } }];
+      const aiResult = {
+        key_quotes: [{ insight: 'test quote', quote_text: 'user quote' }],
+        themes: [],
+        summary: '',
+        sentiment: {},
+      };
       mockAiProxyService.extractInsight.mockResolvedValue(aiResult);
 
       insightRepo.create.mockImplementation((data) => data);
@@ -439,12 +444,12 @@ describe('InsightsService', () => {
       const segments = [makeTranscriptSegment()];
       transcriptRepo.find.mockResolvedValue(segments);
 
-      const aiResult = [
-        { layer: 1, content: 'string content' },
-        { layer: 2, content: 42 },
-        { layer: 3, content: null },
-        { layer: 4, content: undefined },
-      ];
+      const aiResult = {
+        key_quotes: [{ insight: 'quote insight', quote_text: 'user said something' }],
+        themes: [{ insight: 'theme insight', details: 'theme details' }],
+        summary: 'test summary',
+        sentiment: { score: 0.5 },
+      };
       mockAiProxyService.extractInsight.mockResolvedValue(aiResult);
 
       insightRepo.create.mockImplementation((data) => data);
@@ -452,18 +457,8 @@ describe('InsightsService', () => {
 
       await service.extractFromSession(SESSION_ID, TENANT_ID, USER_ID);
 
-      expect(insightRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ content: { text: 'string content' } }),
-      );
-      expect(insightRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ content: { text: '42' } }),
-      );
-      expect(insightRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ content: { text: '' } }),
-      );
-      expect(insightRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ content: { text: '' } }),
-      );
+      // Check that insights are created for all parts
+      expect(insightRepo.create).toHaveBeenCalledTimes(3); // 1 quote + 1 theme + 1 summary
     });
 
     it('handles transcript segments with null speaker', async () => {

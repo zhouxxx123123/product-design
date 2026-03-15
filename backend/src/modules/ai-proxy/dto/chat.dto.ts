@@ -63,7 +63,10 @@ export class ChatDto {
   @Max(32768)
   maxTokens?: number;
 
-  @ApiPropertyOptional({ description: '关联的调研会话 ID（可选，用于日志追踪）', example: '550e...' })
+  @ApiPropertyOptional({
+    description: '关联的调研会话 ID（可选，用于日志追踪）',
+    example: '550e...',
+  })
   @IsOptional()
   @IsUUID()
   sessionId?: string;

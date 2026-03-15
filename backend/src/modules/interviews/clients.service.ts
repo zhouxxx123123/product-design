@@ -98,7 +98,7 @@ export class ClientsService {
           phone: contact.phone ?? null,
           position: contact.title ?? null,
           sortOrder: index,
-        })
+        }),
       );
       await this.contactRepo.save(contactEntities);
 
@@ -145,7 +145,7 @@ export class ClientsService {
             phone: contact.phone ?? null,
             position: contact.title ?? null,
             sortOrder: index,
-          })
+          }),
         );
         await this.contactRepo.save(contactEntities);
       }

@@ -2,11 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { DataSource } from 'typeorm';
 import { UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 
 import { AuthService } from './auth.service';
 import { UserEntity, UserRole } from '../../entities/user.entity';
+import { TenantEntity } from '../../entities/tenant.entity';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -46,6 +48,16 @@ const mockUserRepository = {
   findOne: jest.fn(),
 };
 
+const mockTenantRepository = {
+  findOne: jest.fn(),
+  save: jest.fn(),
+  create: jest.fn(),
+};
+
+const mockDataSource = {
+  transaction: jest.fn(),
+};
+
 // ─── Mock JWT / Config ───────────────────────────────────────────────────────
 
 const mockJwtService = {
@@ -82,8 +94,10 @@ describe('AuthService', () => {
       providers: [
         AuthService,
         { provide: getRepositoryToken(UserEntity), useValue: mockUserRepository },
+        { provide: getRepositoryToken(TenantEntity), useValue: mockTenantRepository },
         { provide: JwtService, useValue: mockJwtService },
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: DataSource, useValue: mockDataSource },
       ],
     }).compile();
 

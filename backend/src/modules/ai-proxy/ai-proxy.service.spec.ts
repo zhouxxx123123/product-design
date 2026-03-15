@@ -25,6 +25,7 @@ import { CopilotComponentTemplateEntity } from '../../entities/copilot-component
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const AI_BASE = 'http://localhost:8000';
+const TENANT_ID = 'tenant-uuid-001';
 
 /** Wrap a value in an axios-like AxiosResponse observable */
 function axiosOf(data: unknown) {
@@ -189,7 +190,13 @@ describe('AiProxyService', () => {
       expect(result).toEqual(mockData);
       expect(httpService.post).toHaveBeenCalledWith(
         `${AI_BASE}/api/v1/insight/extract`,
-        insightDto,
+        {
+          transcript: insightDto.transcript,
+          interview_id: insightDto.interviewId,
+          extract_themes: insightDto.extractThemes,
+          extract_quotes: insightDto.extractQuotes,
+          extract_sentiment: insightDto.extractSentiment,
+        },
         expect.anything(),
       );
     });
@@ -214,9 +221,10 @@ describe('AiProxyService', () => {
   describe('generateOutline()', () => {
     it('returns response data and calls correct URL', async () => {
       const mockData = { sections: [{ title: '开场' }] };
-      httpService.post.mockReturnValue(axiosOf(mockData));
+      const aiResponse = { success: true, data: mockData };
+      httpService.post.mockReturnValue(axiosOf(aiResponse));
 
-      const result = await service.generateOutline(outlineDto);
+      const result = await service.generateOutline(outlineDto, TENANT_ID);
 
       expect(result).toEqual(mockData);
       expect(httpService.post).toHaveBeenCalledWith(
@@ -231,15 +239,26 @@ describe('AiProxyService', () => {
 
   describe('optimizeOutline()', () => {
     it('returns response data and calls correct URL', async () => {
-      const mockData = { sections: [{ title: '优化后开场' }] };
-      httpService.post.mockReturnValue(axiosOf(mockData));
+      const aiResponse = { questions: ['更深入的问题'] };
+      httpService.post.mockReturnValue(axiosOf(aiResponse));
 
       const result = await service.optimizeOutline(optimizeDto);
 
-      expect(result).toEqual(mockData);
+      // The method merges original questions with AI suggestions
+      const expectedResult = {
+        sections: [
+          {
+            id: 's1',
+            title: '开场',
+            questions: ['请介绍自己', '更深入的问题'], // original + AI suggestions
+          },
+        ],
+      };
+
+      expect(result).toEqual(expectedResult);
       expect(httpService.post).toHaveBeenCalledWith(
         `${AI_BASE}/api/v1/outline/optimize`,
-        optimizeDto,
+        expect.any(Object), // The payload is transformed by toOptimizePayload
         expect.anything(),
       );
     });

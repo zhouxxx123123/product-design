@@ -6,6 +6,7 @@ import { SessionsService } from './sessions.service';
 import { InterviewSessionEntity, InterviewStatus } from '../../entities/interview-session.entity';
 import { SessionCommentEntity } from '../../entities/session-comment.entity';
 import { SessionCaseLinkEntity } from '../../entities/session-case-link.entity';
+import { StorageFileEntity } from '../../entities/storage-file.entity';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -31,6 +32,7 @@ function makeSession(overrides: Partial<InterviewSessionEntity> = {}): Interview
   s.structuredSummary = null;
   s.executiveSummary = null;
   s.language = 'zh';
+  s.recordingFileId = null;
   s.startedAt = null;
   s.completedAt = null;
   s.createdAt = new Date('2026-03-01T00:00:00Z');
@@ -82,6 +84,7 @@ const makeMockRepo = () => ({
     andWhere: jest.fn().mockReturnThis(),
     leftJoinAndSelect: jest.fn().mockReturnThis(),
     select: jest.fn().mockReturnThis(),
+    addSelect: jest.fn().mockReturnThis(),
     orderBy: jest.fn().mockReturnThis(),
     skip: jest.fn().mockReturnThis(),
     take: jest.fn().mockReturnThis(),
@@ -98,11 +101,13 @@ describe('SessionsService', () => {
   let sessionRepo: ReturnType<typeof makeMockRepo>;
   let commentsRepo: ReturnType<typeof makeMockRepo>;
   let caseLinksRepo: ReturnType<typeof makeMockRepo>;
+  let storageFileRepo: ReturnType<typeof makeMockRepo>;
 
   beforeEach(async () => {
     sessionRepo = makeMockRepo();
     commentsRepo = makeMockRepo();
     caseLinksRepo = makeMockRepo();
+    storageFileRepo = makeMockRepo();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -110,6 +115,7 @@ describe('SessionsService', () => {
         { provide: getRepositoryToken(InterviewSessionEntity), useValue: sessionRepo },
         { provide: getRepositoryToken(SessionCommentEntity), useValue: commentsRepo },
         { provide: getRepositoryToken(SessionCaseLinkEntity), useValue: caseLinksRepo },
+        { provide: getRepositoryToken(StorageFileEntity), useValue: storageFileRepo },
       ],
     }).compile();
 
@@ -197,15 +203,19 @@ describe('SessionsService', () => {
 
   describe('findAll()', () => {
     it('returns paginated response shape { data, total, page, limit, totalPages }', async () => {
-      const sessions = [makeSession()];
+      const sessionData = { ...makeSession(), s_insightsCount: '5', s_commentsCount: '3' };
       const qb = sessionRepo.createQueryBuilder();
-      qb.getManyAndCount.mockResolvedValue([sessions, 1]);
+      qb.getManyAndCount.mockResolvedValue([[sessionData], 1]);
       sessionRepo.createQueryBuilder.mockReturnValue(qb);
 
       const result = await service.findAll(TENANT_ID, { page: 1, limit: 10 });
 
       expect(result).toEqual({
-        data: sessions,
+        data: [expect.objectContaining({
+          ...makeSession(),
+          insightsCount: 5,
+          commentsCount: 3,
+        })],
         total: 1,
         page: 1,
         limit: 10,
@@ -297,7 +307,31 @@ describe('SessionsService', () => {
           where: expect.objectContaining({ id: SESSION_ID, tenantId: TENANT_ID }),
         }),
       );
-      expect(result).toBe(session);
+      expect(result).toEqual({
+        ...session,
+        recordingUrl: null,
+      });
+    });
+
+    it('returns session with recording URL when recordingFileId exists', async () => {
+      const session = makeSession({ recordingFileId: 'file-uuid-001' });
+      const storageFile = { id: 'file-uuid-001', url: 'https://example.com/recording.mp3' };
+      sessionRepo.findOne.mockResolvedValue(session);
+      storageFileRepo.findOne.mockResolvedValue(storageFile);
+
+      const result = await service.findById(SESSION_ID, TENANT_ID);
+
+      expect(storageFileRepo.findOne).toHaveBeenCalledWith({
+        where: {
+          id: 'file-uuid-001',
+          tenantId: TENANT_ID,
+          deletedAt: expect.anything(),
+        },
+      });
+      expect(result).toEqual({
+        ...session,
+        recordingUrl: 'https://example.com/recording.mp3',
+      });
     });
 
     it('throws NotFoundException when session is not found', async () => {
@@ -436,6 +470,8 @@ describe('SessionsService', () => {
   describe('addComment()', () => {
     it('creates and saves a comment', async () => {
       const comment = makeComment();
+      // Mock assertSessionExists check
+      sessionRepo.findOne.mockResolvedValueOnce(makeSession()); // for assertSessionExists
       commentsRepo.create.mockReturnValue(comment);
       commentsRepo.save.mockResolvedValue(comment);
 
@@ -454,6 +490,8 @@ describe('SessionsService', () => {
 
     it('sets targetType and targetId when provided', async () => {
       const comment = makeComment({ targetType: 'segment', targetId: 'seg-001' });
+      // Mock assertSessionExists check
+      sessionRepo.findOne.mockResolvedValueOnce(makeSession()); // for assertSessionExists
       commentsRepo.create.mockReturnValue(comment);
       commentsRepo.save.mockResolvedValue(comment);
 
@@ -473,6 +511,8 @@ describe('SessionsService', () => {
 
     it('defaults targetType and targetId to null when not provided', async () => {
       const comment = makeComment();
+      // Mock assertSessionExists check
+      sessionRepo.findOne.mockResolvedValueOnce(makeSession()); // for assertSessionExists
       commentsRepo.create.mockReturnValue(comment);
       commentsRepo.save.mockResolvedValue(comment);
 
@@ -516,6 +556,8 @@ describe('SessionsService', () => {
   describe('addCaseLink()', () => {
     it('creates and saves a case link', async () => {
       const link = makeCaseLink();
+      // Mock assertSessionExists check
+      sessionRepo.findOne.mockResolvedValueOnce(makeSession()); // for assertSessionExists
       caseLinksRepo.create.mockReturnValue(link);
       caseLinksRepo.save.mockResolvedValue(link);
 
@@ -535,6 +577,8 @@ describe('SessionsService', () => {
 
     it('sets reason to null when not provided', async () => {
       const link = makeCaseLink();
+      // Mock assertSessionExists check
+      sessionRepo.findOne.mockResolvedValueOnce(makeSession()); // for assertSessionExists
       caseLinksRepo.create.mockReturnValue(link);
       caseLinksRepo.save.mockResolvedValue(link);
 

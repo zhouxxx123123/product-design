@@ -191,19 +191,20 @@ describe('MemoriesService', () => {
     it('deletes the memory successfully', async () => {
       memoryRepo.delete.mockResolvedValue({ affected: 1 });
 
-      const result = await service.deleteOne(MEMORY_ID, USER_ID);
+      const result = await service.deleteOne(MEMORY_ID, USER_ID, TENANT_ID);
 
-      expect(memoryRepo.delete).toHaveBeenCalledWith({ id: MEMORY_ID, userId: USER_ID });
+      expect(memoryRepo.delete).toHaveBeenCalledWith({ id: MEMORY_ID, userId: USER_ID, tenantId: TENANT_ID });
       expect(result).toEqual({ success: true });
     });
 
-    it('still returns success even if no record was affected', async () => {
+    it('throws NotFoundException when no record was affected', async () => {
       memoryRepo.delete.mockResolvedValue({ affected: 0 });
 
-      const result = await service.deleteOne('nonexistent-id', USER_ID);
+      await expect(service.deleteOne('nonexistent-id', USER_ID, TENANT_ID)).rejects.toThrow(
+        '记忆 nonexistent-id 不存在',
+      );
 
-      expect(memoryRepo.delete).toHaveBeenCalledWith({ id: 'nonexistent-id', userId: USER_ID });
-      expect(result).toEqual({ success: true });
+      expect(memoryRepo.delete).toHaveBeenCalledWith({ id: 'nonexistent-id', userId: USER_ID, tenantId: TENANT_ID });
     });
   });
 

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi, User, UpdateUserDto } from '../services/users';
+import { useToastStore } from '../stores/toastStore';
 
 const AdminUsersView: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -99,6 +100,20 @@ const AdminUsersView: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setEditingUser(null);
+    },
+  });
+
+  const changeRoleMutation = useMutation({
+    mutationFn: ({ id, role }: { id: string; role: 'admin' | 'sales' | 'expert' }) =>
+      usersApi.changeRole(id, role),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setPermissionUserId(null);
+      useToastStore.getState().addToast('角色修改成功', 'success');
+    },
+    onError: () => {
+      // Keep modal open on error
+      useToastStore.getState().addToast('角色修改失败，请重试', 'error');
     },
   });
 
@@ -645,16 +660,13 @@ const AdminUsersView: React.FC = () => {
                 </button>
                 <button
                   onClick={() => {
-                    updateMutation.mutate({
-                      id: permissionUserId,
-                      dto: { role: selectedRole }
-                    });
-                    setPermissionUserId(null);
+                    if (!permissionUserId) return;
+                    changeRoleMutation.mutate({ id: permissionUserId, role: selectedRole });
                   }}
-                  disabled={updateMutation.isPending}
+                  disabled={changeRoleMutation.isPending}
                   className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {updateMutation.isPending ? '保存中...' : '确认修改'}
+                  {changeRoleMutation.isPending ? '保存中...' : '确认修改'}
                 </button>
               </div>
             </motion.div>

@@ -17,9 +17,17 @@ import {
   ApiResponse,
   ApiQuery,
   ApiParam,
+  ApiBody,
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
-import { CreateUserDto, UpdateUserDto, UserListQueryDto, UserResponseDto, UserRole } from './dto/user.dto';
+import {
+  CreateUserDto,
+  UpdateUserDto,
+  UserListQueryDto,
+  UserResponseDto,
+  UserRole,
+  ChangeRoleDto,
+} from './dto/user.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -89,5 +97,21 @@ export class UsersController {
   @ApiResponse({ status: 404, description: '用户不存在' })
   remove(@Param('id') id: string, @Req() req: RequestWithUser) {
     return this.usersService.softDelete(id, req.user.tenantId);
+  }
+
+  @Patch(':id/role')
+  @Roles('ADMIN')
+  @ApiOperation({ summary: '修改用户角色', description: '仅管理员可操作，会记录审计日志' })
+  @ApiParam({ name: 'id', description: '用户ID（UUID）' })
+  @ApiBody({ type: ChangeRoleDto, description: '新角色信息' })
+  @ApiResponse({ status: 200, description: '角色修改成功', type: UserResponseDto })
+  @ApiResponse({ status: 403, description: '权限不足' })
+  @ApiResponse({ status: 404, description: '用户不存在' })
+  changeRole(
+    @Param('id') id: string,
+    @Req() req: RequestWithUser,
+    @Body() dto: ChangeRoleDto,
+  ): Promise<UserResponseDto> {
+    return this.usersService.changeRole(id, req.user.tenantId, dto.role, req.user.id);
   }
 }

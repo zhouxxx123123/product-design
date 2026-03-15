@@ -45,6 +45,16 @@ export default function TenantMembersDrawer({ tenant, onClose }: TenantMembersDr
     onError: () => useToastStore.getState().addToast('移除成员失败，请重试', 'error'),
   });
 
+  const updateRoleMutation = useMutation({
+    mutationFn: ({ tenantId, userId, role }: { tenantId: string; userId: string; role: TenantMember['role'] }) =>
+      tenantsApi.updateMemberRole(tenantId, userId, role),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tenant-members', tenant?.id] });
+      useToastStore.getState().addToast('角色已更新', 'success');
+    },
+    onError: () => useToastStore.getState().addToast('更新角色失败，请重试', 'error'),
+  });
+
   const handleAddMember = (e: React.FormEvent) => {
     e.preventDefault();
     if (!tenant || !newMember.userId.trim()) return;
@@ -91,6 +101,16 @@ export default function TenantMembersDrawer({ tenant, onClose }: TenantMembersDr
         return '只读';
       default:
         return role;
+    }
+  };
+
+  const getRoleSelectClass = (role: string) => {
+    switch (role) {
+      case 'owner': return 'text-purple-700 bg-purple-50 border-purple-200 focus:ring-purple-400';
+      case 'admin': return 'text-blue-700 bg-blue-50 border-blue-200 focus:ring-blue-400';
+      case 'member': return 'text-green-700 bg-green-50 border-green-200 focus:ring-green-400';
+      case 'viewer': return 'text-gray-600 bg-gray-50 border-gray-200 focus:ring-gray-400';
+      default: return 'text-gray-600 bg-gray-50 border-gray-200 focus:ring-gray-400';
     }
   };
 
@@ -161,9 +181,24 @@ export default function TenantMembersDrawer({ tenant, onClose }: TenantMembersDr
                           {member.userId}
                         </div>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getRoleBadgeClass(member.role)}`}>
-                            {getRoleLabel(member.role)}
-                          </span>
+                          <select
+                            value={member.role}
+                            onChange={(e) => {
+                              if (!tenant) return;
+                              updateRoleMutation.mutate({
+                                tenantId: tenant.id,
+                                userId: member.userId,
+                                role: e.target.value as TenantMember['role'],
+                              });
+                            }}
+                            disabled={updateRoleMutation.isPending}
+                            className={`text-xs font-medium px-2 py-1 rounded-full border cursor-pointer focus:outline-none focus:ring-1 focus:ring-offset-1 ${getRoleSelectClass(member.role)}`}
+                          >
+                            <option value="viewer">只读</option>
+                            <option value="member">成员</option>
+                            <option value="admin">管理员</option>
+                            <option value="owner">所有者</option>
+                          </select>
                           <span className="text-xs text-gray-500">
                             {formatDate(member.joinedAt)}
                           </span>

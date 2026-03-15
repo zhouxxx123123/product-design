@@ -16,11 +16,14 @@ import {
   ApiResponse,
   ApiQuery,
   ApiParam,
+  ApiBody,
 } from '@nestjs/swagger';
 import { TenantsService } from './tenants.service';
+import { TenantMemberEntity } from '../../entities/tenant-member.entity';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
 import { AddMemberDto } from './dto/add-member.dto';
+import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
 import { TenantResponseDto } from './dto/tenant-response.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -127,5 +130,36 @@ export class TenantsController {
   @ApiResponse({ status: 200, description: '成员移除成功' })
   removeMember(@Param('id') id: string, @Param('uid') uid: string) {
     return this.tenantsService.removeMember(id, uid);
+  }
+
+  @Patch(':id/members/:uid/role')
+  @ApiOperation({
+    summary: '更新租户成员角色',
+    description: '修改指定成员在租户中的角色权限（仅管理员可操作）',
+  })
+  @ApiParam({ name: 'id', description: '租户 ID（UUID）' })
+  @ApiParam({ name: 'uid', description: '用户 ID（UUID）' })
+  @ApiBody({ type: UpdateMemberRoleDto, description: '新角色信息' })
+  @ApiResponse({
+    status: 200,
+    description: '角色更新成功',
+    schema: {
+      properties: {
+        id: { type: 'string', example: 'uuid-12345' },
+        tenantId: { type: 'string', example: 'uuid-67890' },
+        userId: { type: 'string', example: 'uuid-abcde' },
+        role: { type: 'string', enum: ['owner', 'admin', 'member', 'viewer'], example: 'admin' },
+        joinedAt: { type: 'string', example: '2024-01-01T00:00:00Z' },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: '成员不存在' })
+  @ApiResponse({ status: 403, description: '权限不足' })
+  updateMemberRole(
+    @Param('id') id: string,
+    @Param('uid') uid: string,
+    @Body() dto: UpdateMemberRoleDto,
+  ): Promise<TenantMemberEntity> {
+    return this.tenantsService.updateMemberRole(id, uid, dto.role);
   }
 }

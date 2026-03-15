@@ -120,4 +120,18 @@ export class TenantsService {
     await this.memberRepository.remove(member);
     return { success: true };
   }
+
+  async updateMemberRole(
+    tenantId: string,
+    userId: string,
+    newRole: MemberRole,
+  ): Promise<TenantMemberEntity> {
+    const member = await this.memberRepository.findOne({
+      where: { tenantId, userId },
+    });
+    if (!member) throw new NotFoundException('成员不存在');
+
+    const updatedMember = Object.assign({}, member, { role: newRole });
+    return this.memberRepository.save(updatedMember);
+  }
 }

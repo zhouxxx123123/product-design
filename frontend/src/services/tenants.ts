@@ -75,4 +75,7 @@ export const tenantsApi = {
 
   removeMember: (tenantId: string, userId: string) =>
     http.delete<{ success: boolean }>(`/tenants/${tenantId}/members/${userId}`),
+
+  updateMemberRole: (tenantId: string, userId: string, role: TenantMember['role']) =>
+    http.patch<TenantMember>(`/tenants/${tenantId}/members/${userId}/role`, { role }),
 };

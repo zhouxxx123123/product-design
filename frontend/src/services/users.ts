@@ -24,6 +24,10 @@ export interface UpdateUserDto {
   isActive?: boolean;
 }
 
+export interface ChangeRoleDto {
+  role: 'admin' | 'sales' | 'expert';
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   total: number;
@@ -40,4 +44,6 @@ export const usersApi = {
   create: (dto: CreateUserDto) => http.post<User>('/users', dto),
   update: (id: string, dto: UpdateUserDto) => http.patch<User>(`/users/${id}`, dto),
   delete: (id: string) => http.delete(`/users/${id}`),
+  changeRole: (id: string, role: 'admin' | 'sales' | 'expert') =>
+    http.patch<User>(`/users/${id}/role`, { role }),
 };

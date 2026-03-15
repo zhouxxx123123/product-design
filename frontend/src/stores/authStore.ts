@@ -12,8 +12,8 @@ interface User {
 
 interface AuthState {
   user: User | null;
-  accessToken: string | null;      // memory-only, NOT persisted
-  refreshToken: string | null;     // memory-only, NOT persisted
+  accessToken: string | null;      // memory-only, NOT persisted (short-lived)
+  refreshToken: string | null;     // persisted in localStorage (long-lived, needed for page refresh)
   isLoggedIn: boolean;
   setAuth: (user: User, accessToken: string, refreshToken: string) => void;
   clearAuth: () => void;
@@ -34,7 +34,9 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         user: state.user,
         isLoggedIn: state.isLoggedIn,
-        // accessToken and refreshToken are NOT persisted for security
+        // accessToken is NOT persisted (15min expiry, memory-only)
+        // refreshToken IS persisted so page refresh silently re-acquires accessToken
+        refreshToken: state.refreshToken,
       }),
     },
   ),

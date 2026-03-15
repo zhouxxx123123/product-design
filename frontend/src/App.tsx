@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import axios from 'axios';
 import { Routes, Route, useNavigate, useLocation, Navigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { AlertCircle, ShieldOff } from 'lucide-react';
@@ -557,6 +558,36 @@ function AppLayout() {
 // ── Root App ──
 
 const App: React.FC = () => {
+  const { isLoggedIn, accessToken, refreshToken, user, setAuth, clearAuth } = useAuthStore();
+  const [authRestored, setAuthRestored] = useState(false);
+
+  // On page refresh: isLoggedIn + refreshToken are persisted, but accessToken is memory-only.
+  // Silently exchange refreshToken for a new accessToken before rendering protected routes.
+  useEffect(() => {
+    if (isLoggedIn && !accessToken && refreshToken && user) {
+      axios.post<{ accessToken: string; refreshToken: string }>(
+        '/api/v1/auth/refresh',
+        { refreshToken },
+      )
+        .then(({ data }) => {
+          setAuth(user, data.accessToken, data.refreshToken);
+        })
+        .catch(() => {
+          // Refresh token expired or revoked — force re-login
+          clearAuth();
+        })
+        .finally(() => {
+          setAuthRestored(true);
+        });
+    } else {
+      setAuthRestored(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Prevent flash-redirect to /login while token is being restored
+  if (!authRestored) return null;
+
   return (
     <>
       <Routes>

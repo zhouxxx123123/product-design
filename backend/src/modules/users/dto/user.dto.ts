@@ -129,3 +129,10 @@ export class UserResponseDto {
     return dto;
   }
 }
+
+export class ChangeRoleDto {
+  @ApiProperty({ enum: UserRole, example: UserRole.SALES, description: '新角色' })
+  @IsEnum(UserRole)
+  @IsNotEmpty()
+  role: UserRole;
+}

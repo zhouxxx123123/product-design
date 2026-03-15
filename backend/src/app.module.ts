@@ -17,6 +17,7 @@ import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module
 import { MemoriesModule } from './modules/memories/memories.module';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
+import { PermissionsModule } from './modules/permissions/permissions.module';
 import { TranscriptionWsModule } from './modules/transcription-ws/transcription-ws.module';
 import { DatabaseConfig } from './config/database.config';
 import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
@@ -47,6 +48,7 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
     MemoriesModule,
     AuditLogsModule,
     TenantsModule,
+    PermissionsModule,
     TranscriptionWsModule,
   ],
   providers: [

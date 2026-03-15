@@ -10,12 +10,15 @@ import {
   UserRole,
   UserResponseDto,
 } from './dto/user.dto';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { AuditAction } from '../../entities/audit-log.entity';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
+    private readonly auditLogsService: AuditLogsService,
   ) {}
 
   async findById(id: string): Promise<UserResponseDto> {
@@ -72,7 +75,12 @@ export class UsersService {
     return UserResponseDto.fromEntity(saved);
   }
 
-  async update(id: string, tenantId: string, dto: UpdateUserDto, callerRole: UserRole): Promise<UserResponseDto> {
+  async update(
+    id: string,
+    tenantId: string,
+    dto: UpdateUserDto,
+    callerRole: UserRole,
+  ): Promise<UserResponseDto> {
     const user = await this.userRepository.findOne({
       where: { id, tenantId, deletedAt: IsNull() },
     });
@@ -104,5 +112,39 @@ export class UsersService {
     user.deletedAt = new Date();
     await this.userRepository.save(user);
     return { success: true };
+  }
+
+  async changeRole(
+    id: string,
+    tenantId: string,
+    newRole: UserRole,
+    callerId: string,
+  ): Promise<UserResponseDto> {
+    const user = await this.userRepository.findOne({
+      where: { id, tenantId, deletedAt: IsNull() },
+    });
+    if (!user) {
+      throw new NotFoundException(`User with id ${id} not found`);
+    }
+
+    const fromRole = user.role;
+    const updatedUser = Object.assign({}, user, { role: newRole });
+
+    // Save the updated user and get the result
+    const saveResult = await this.userRepository.save(updatedUser);
+    const saved = Array.isArray(saveResult) ? saveResult[0] : saveResult;
+
+    // Create audit log entry
+    await this.auditLogsService.create({
+      action: AuditAction.UPDATE,
+      entityType: 'user',
+      entityId: id,
+      tenantId,
+      userId: callerId,
+      newValues: { roleChange: { from: fromRole, to: newRole } },
+      notes: 'USER_ROLE_CHANGED',
+    });
+
+    return UserResponseDto.fromEntity(saved);
   }
 }

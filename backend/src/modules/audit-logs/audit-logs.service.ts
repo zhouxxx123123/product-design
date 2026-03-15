@@ -22,6 +22,20 @@ export interface PaginatedAuditLogs {
   totalPages: number;
 }
 
+export interface CreateAuditLogData {
+  action: AuditAction;
+  entityType: string;
+  entityId: string;
+  tenantId: string;
+  userId: string | null;
+  oldValues?: Record<string, unknown> | null;
+  newValues?: Record<string, unknown> | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  requestId?: string | null;
+  notes?: string | null;
+}
+
 @Injectable()
 export class AuditLogsService {
   constructor(
@@ -74,5 +88,22 @@ export class AuditLogsService {
       limit,
       totalPages: Math.ceil(total / limit),
     };
+  }
+
+  async create(data: CreateAuditLogData): Promise<AuditLogEntity> {
+    const auditLog = this.auditLogRepository.create({
+      action: data.action,
+      entityType: data.entityType,
+      entityId: data.entityId,
+      tenantId: data.tenantId,
+      userId: data.userId,
+      oldValues: data.oldValues ?? null,
+      newValues: data.newValues ?? null,
+      ipAddress: data.ipAddress ?? null,
+      userAgent: data.userAgent ?? null,
+      requestId: data.requestId ?? null,
+      notes: data.notes ?? null,
+    });
+    return this.auditLogRepository.save(auditLog);
   }
 }

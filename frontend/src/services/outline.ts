@@ -1,16 +1,44 @@
 import http from './http';
-import type { OutlineRequest, OutlineResponse, OutlineSection } from '../types';
 
-interface OptimizeOutlineDto {
+export interface OutlineSection {
+  id: string;
+  title: string;
+  questions: string[];
+  notes?: string;
+}
+
+export interface OutlineData {
+  title: string;
+  sections: OutlineSection[];
+  estimatedDuration?: string;
+}
+
+export interface GenerateOutlineDto {
   sessionId: string;
-  existingOutline: OutlineSection[];  // Required, not optional
-  clientBackground?: string;
   researchGoals?: string[];
+  clientBackground?: string;
+}
+
+export interface OptimizeOutlineDto {
+  sessionId: string;
+  existingOutline: OutlineSection[];
   feedback?: string;
 }
 
+interface OutlineRequest {
+  sessionId: string;
+  clientBackground?: string;
+  researchGoals?: string[];
+  existingOutline?: OutlineSection[];
+}
+
+interface OutlineResponse {
+  sections: OutlineSection[];
+  generatedAt: string;
+}
+
 export const outlineApi = {
-  generate: (dto: OutlineRequest) =>
+  generate: (dto: GenerateOutlineDto) =>
     http.post<OutlineResponse>('/ai/outline/generate', dto),
 
   optimize: (dto: OptimizeOutlineDto) => {

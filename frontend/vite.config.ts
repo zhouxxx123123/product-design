@@ -51,6 +51,12 @@ export default defineConfig(({ mode }) => {
         rewrite: (path: string) => path.replace(/^\/ai/, '/api/v1'),
         configure: makeProxyLogger(`ai ${aiTarget}`),
       },
+      '/ws-ai': {
+        target: aiTarget.replace(/^http/, 'ws'),
+        ws: true,
+        changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/ws-ai/, '/api/v1/asr'),
+      },
     },
   },
   build: {

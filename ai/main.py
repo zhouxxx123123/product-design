@@ -11,6 +11,8 @@ import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request as StarletteRequest
 
 from core.config import settings
 from core.logging import configure_logging
@@ -28,11 +30,14 @@ async def lifespan(app: FastAPI):
 
     # Critical security check - JWT_SECRET must be set in production
     if not settings.JWT_SECRET:
-        logger.error("JWT_SECRET is not configured - WebSocket ASR authentication will be bypassed!")
-        raise RuntimeError(
-            "JWT_SECRET is not configured. "
-            "Set JWT_SECRET environment variable before starting the server."
-        )
+        if settings.DEBUG:
+            logger.warning("JWT_SECRET 未配置，WebSocket ASR token 验证已跳过（仅开发模式）")
+        else:
+            logger.error("JWT_SECRET is not configured - refusing to start in production!")
+            raise RuntimeError(
+                "JWT_SECRET is not configured. "
+                "Set JWT_SECRET environment variable before starting the server."
+            )
 
     if not settings.MOONSHOT_API_KEY:
         logger.warning("MOONSHOT_API_KEY 未配置，LLM 功能将不可用")
@@ -57,13 +62,24 @@ app = FastAPI(
 
 # 中间件
 app.add_middleware(GZipMiddleware, minimum_size=1000)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# 自定义 CORS 中间件：跳过 WebSocket 升级请求（Starlette CORSMiddleware 会对所有 WS 返回 403）
+# HTTP 请求正常走 CORS 处理；WS 请求由端点内部的 JWT 验证把关
+class SmartCORSMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: StarletteRequest, call_next):
+        # WebSocket 升级请求直接放行，不做 CORS 检查
+        if request.headers.get("upgrade", "").lower() == "websocket":
+            return await call_next(request)
+        # 普通 HTTP 请求添加 CORS 响应头
+        response = await call_next(request)
+        origin = request.headers.get("origin")
+        if origin and (origin in settings.CORS_ORIGINS or settings.DEBUG):
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "*"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+        return response
+
+app.add_middleware(SmartCORSMiddleware)
 
 # 路由
 app.include_router(api_router, prefix="/api/v1")

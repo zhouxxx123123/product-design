@@ -11,7 +11,6 @@ import { Repository } from 'typeorm';
 import { Response } from 'express';
 import { firstValueFrom } from 'rxjs';
 import { ChatDto } from './dto/chat.dto';
-import { GenerateComponentDto } from './dto/component.dto';
 import { InsightProxyDto } from './dto/insight.dto';
 import { GenerateOutlineDto, OptimizeOutlineDto, OutlineSectionDto } from './dto/outline.dto';
 import { CopilotComponentTemplateEntity } from '../../entities/copilot-component-template.entity';
@@ -371,36 +370,16 @@ export class AiProxyService {
     };
   }
 
-  async generateComponent(dto: GenerateComponentDto): Promise<unknown> {
-    const url = `${this.aiServiceUrl}/api/v1/component/generate`;
-    this.logger.debug(`Forwarding component generation request to ${url}`);
-
-    return AiProxyService.withRetry(
-      () =>
-        firstValueFrom(
-          this.httpService.post(url, dto, {
-            headers: { 'Content-Type': 'application/json' },
-            timeout: 60_000,
-          }),
-        ).then((r) => r.data),
-      3,
-      this.logger,
-    ).catch((error: unknown) => {
-      this.logger.error('Component generation request failed after retries', error);
-      throw new InternalServerErrorException('Component generation service unavailable.');
-    });
-  }
-
   async saveComponentTemplate(
     tenantId: string,
-    dto: GenerateComponentDto,
+    description: string,
     schema: Record<string, unknown>,
   ): Promise<void> {
     try {
       const template = this.componentTemplateRepo.create({
         tenantId,
-        name: dto.description.slice(0, 100),
-        description: dto.description,
+        name: description.slice(0, 100),
+        description: description,
         schema,
       });
       await this.componentTemplateRepo.save(template);

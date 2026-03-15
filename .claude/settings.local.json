@@ -15,7 +15,9 @@
       "Bash(docker-compose up:*)",
       "Bash(pg_isready -h localhost -p 5433 2>&1; redis-cli -p 6379 ping 2>&1)",
       "Bash(nc:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(for module:*)",
+      "Bash(ls:*)"
     ]
   }
 }

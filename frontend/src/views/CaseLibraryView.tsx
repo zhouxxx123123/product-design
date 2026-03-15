@@ -115,16 +115,23 @@ const CaseLibraryView: React.FC = () => {
     createMutation.mutate();
   };
 
-  const handleEditCase = (caseItem: any) => {
-    setEditingCase(caseItem);
-    setEditForm({
-      title: caseItem.title,
-      industry: cases.find(c => c.id === caseItem.id)?.client || '',
-      content: caseItem.client,
-      summary: caseItem.client,
-      tags: caseItem.tags || [],
-    });
-    setIsEditModalOpen(true);
+  const handleEditCase = async (caseItem: typeof cases[0]) => {
+    try {
+      // Fetch full case data to get all fields
+      const { data: fullCase } = await casesApi.get(caseItem.id);
+      setEditingCase(fullCase);
+      setEditForm({
+        title: fullCase.title,
+        industry: fullCase.industry ?? '',
+        content: fullCase.content ?? '',
+        summary: fullCase.summary ?? '',
+        tags: fullCase.tags ?? [],
+      });
+      setIsEditModalOpen(true);
+    } catch (error) {
+      console.error('Failed to fetch case details for editing:', error);
+      alert('无法获取案例详情，请稍后重试');
+    }
     setOpenMenuId(null);
   };
 
@@ -155,7 +162,8 @@ const CaseLibraryView: React.FC = () => {
   const cases = (casesData?.data ?? []).map(c => ({
     id: c.id,
     title: c.title,
-    client: c.summary || (c.content ? c.content.substring(0, 100) + '...' : ''),
+    preview: c.summary || (c.content ? c.content.substring(0, 100) + '...' : ''),
+    industry: c.industry ?? '',
     date: c.createdAt,
     status: c.status,
     tags: c.tags ?? [],
@@ -286,7 +294,7 @@ const CaseLibraryView: React.FC = () => {
                   <h3 className="text-lg font-bold text-slate-900 mt-1 leading-tight group-hover:text-indigo-600 transition-all">{item.title}</h3>
                   <p className="text-sm text-slate-500 mt-2 flex items-center gap-1.5">
                     <User className="w-4 h-4" />
-                    {item.client}
+                    {item.preview}
                   </p>
                 </div>
 
@@ -379,7 +387,7 @@ const CaseLibraryView: React.FC = () => {
                   <div className="flex items-center gap-4 text-xs text-slate-500">
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <User className="w-3 h-3" />
-                      <span className="truncate max-w-[120px]">{item.client}</span>
+                      <span className="truncate max-w-[120px]">{item.preview}</span>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <Clock className="w-3 h-3" />
@@ -637,6 +645,16 @@ const CaseLibraryView: React.FC = () => {
                     onChange={(e) => setEditForm({ ...editForm, industry: e.target.value })}
                     placeholder="如：金融科技、人工智能"
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">案例内容 *</label>
+                  <textarea
+                    value={editForm.content}
+                    onChange={(e) => setEditForm({ ...editForm, content: e.target.value })}
+                    placeholder="描述案例的详细内容..."
+                    rows={4}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all resize-none"
                   />
                 </div>
                 <div className="space-y-2">

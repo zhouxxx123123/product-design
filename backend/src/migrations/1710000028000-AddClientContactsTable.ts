@@ -18,7 +18,9 @@ export class AddClientContactsTable1710000028000 implements MigrationInterface {
     `);
 
     // Add index for performance
-    await queryRunner.query(`CREATE INDEX idx_client_contacts_client_id ON client_contacts(client_id)`);
+    await queryRunner.query(
+      `CREATE INDEX idx_client_contacts_client_id ON client_contacts(client_id)`,
+    );
 
     // Migrate existing contact data from client_profiles to client_contacts
     await queryRunner.query(`

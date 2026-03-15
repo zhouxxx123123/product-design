@@ -11,6 +11,7 @@ import { casesApi } from '../services/cases';
 import { uploadFile, type UploadedFileInfo } from '../services/storage';
 import { useInsightExtract } from '../hooks/useInsightExtract';
 import { useWorkspaceSession } from '../hooks/useWorkspaceSession';
+import { useRealtimeASR } from '../hooks/useRealtimeASR';
 import { useToastStore } from '../stores/toastStore';
 import {
   ArrowLeft,
@@ -92,82 +93,36 @@ const SurveyWorkspaceView: React.FC<SurveyWorkspaceProps> = ({ onBack, onViewCha
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const { isLoading: isExtractingInsight, result: insightResult, extract } = useInsightExtract();
 
-  // 实时录音
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  // 实时录音（WebSocket ASR）
+  const { isRecording, recordingSeconds, startRecording, stopRecording } = useRealtimeASR({
+    onSegment: async (seg) => {
+      if (!seg.is_final) return;
+      const item = {
+        time: new Date(seg.begin_time).toISOString().slice(14, 19),
+        speaker: '识别结果',
+        text: seg.text,
+      };
+      setTranscript((prev) => [...prev, item]);
+      setActiveTab('transcript');
+      try {
+        await persistSegments([{
+          text: seg.text,
+          startMs: seg.begin_time,
+          endMs: seg.end_time,
+          speaker: '识别结果',
+        }]);
+      } catch {
+        // persistSegments failure is non-critical; transcript already updated in UI
+      }
+    },
+    onError: (msg) => {
+      setAsrError(msg);
+      useToastStore.getState().addToast(`语音识别失败: ${msg}`, 'error');
+    },
+  });
 
   const formatDuration = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
-      };
-
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const audioFile = new File([audioBlob], 'recording.webm', { type: 'audio/webm' });
-        stream.getTracks().forEach((t) => t.stop());
-        setIsRecording(false);
-        setRecordingSeconds(0);
-        setAsrLoading(true);
-        setAsrError(null);
-        setActiveTab('transcript');
-        try {
-          const result = await recognizeAudioFile(audioFile);
-          const newSegments = result.segments.map((seg) => ({
-            time: new Date(seg.begin_time).toISOString().slice(14, 19),
-            speaker: seg.speaker_tag === 0 ? '识别结果' : `说话人 ${seg.speaker_tag}`,
-            text: seg.text,
-          }));
-          setTranscript((prev) => [...prev, ...newSegments]);
-          await persistSegments(
-            result.segments.map((seg) => ({
-              text: seg.text,
-              startMs: seg.begin_time,
-              endMs: seg.end_time,
-              speaker: seg.speaker_tag === 0 ? '识别结果' : `说话人 ${seg.speaker_tag}`,
-            }))
-          );
-        } catch (err) {
-          const errorMsg = err instanceof Error ? err.message : '识别失败';
-          setAsrError(errorMsg);
-          useToastStore.getState().addToast(`语音识别失败: ${errorMsg}`, 'error');
-        } finally {
-          setAsrLoading(false);
-        }
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-      setRecordingSeconds(0);
-      recordingTimerRef.current = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
-    } catch {
-      setAsrError('无法访问麦克风，请检查浏览器权限');
-    }
-  };
-
-  const stopRecording = () => {
-    if (recordingTimerRef.current) {
-      clearInterval(recordingTimerRef.current);
-      recordingTimerRef.current = null;
-    }
-    mediaRecorderRef.current?.stop();
-  };
-
-  // 清理定时器
-  useEffect(() => () => {
-    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-  }, []);
 
   // outline 使用 ref 防止 React StrictMode 及父组件重渲染导致重复请求
   const outlineRequestedRef = useRef(false);
@@ -416,7 +371,7 @@ const SurveyWorkspaceView: React.FC<SurveyWorkspaceProps> = ({ onBack, onViewCha
                 <button
                   onClick={isRecording ? stopRecording : startRecording}
                   disabled={asrLoading}
-                  title={isRecording ? '停止录音并识别' : '开始实时录音'}
+                  title={isRecording ? '停止录音' : '开始实时录音（边录边识别）'}
                   className={cn(
                     'flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-bold transition-all border',
                     asrLoading
@@ -430,6 +385,7 @@ const SurveyWorkspaceView: React.FC<SurveyWorkspaceProps> = ({ onBack, onViewCha
                     <>
                       <MicOff className="w-3.5 h-3.5" />
                       <span className="tabular-nums">{formatDuration(recordingSeconds)}</span>
+                      <span className="text-[10px] opacity-75">实时识别中</span>
                     </>
                   ) : (
                     <>

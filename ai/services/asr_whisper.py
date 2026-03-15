@@ -260,10 +260,22 @@ class WhisperAsrService:
                 call_count=self._realtime_call_count,
             )
             loop = asyncio.get_running_loop()
-            result = await loop.run_in_executor(
-                self._executor,
-                lambda: self._transcribe_bytes(buffer, "audio.wav", beam_size=1),
-            )
+            try:
+                result = await loop.run_in_executor(
+                    self._executor,
+                    lambda: self._transcribe_bytes(buffer, "audio.wav", beam_size=1),
+                )
+            except Exception as exc:
+                # 推理失败（如模型文件权限问题）不应中断 WebSocket 连接
+                # 丢弃本批次，返回 partial 让客户端继续发送
+                logger.error("Whisper 实时推理失败，跳过本批次", error=str(exc))
+                return {
+                    "status": "partial",
+                    "text": "",
+                    "is_final": False,
+                    "begin_time": 0,
+                    "end_time": 0,
+                }
 
             segs = result["segments"]
             text = " ".join(s["text"] for s in segs) if segs else ""

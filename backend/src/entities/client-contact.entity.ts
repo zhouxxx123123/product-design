@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { ClientProfileEntity } from './client-profile.entity';
 
 @Entity('client_contacts')
@@ -25,8 +33,8 @@ export class ClientContactEntity {
   @Column({ type: 'varchar', length: 100, nullable: true })
   position: string | null;
 
-  @Column({ type: 'int', default: 0 })
-  sortOrder: number;  // 0 = primary, 1 = secondary
+  @Column({ type: 'int', default: 0, name: 'sort_order' })
+  sortOrder: number; // 0 = primary, 1 = secondary
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt: Date;

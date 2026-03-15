@@ -17,7 +17,9 @@ export interface Template {
   category?: string;
   templateType?: string;
   sections?: TemplateSection[];
+  content?: any;
   createdAt: string;
+  updatedAt?: string;
   isDefault?: boolean;
   duration?: number;
 }
@@ -40,4 +42,5 @@ export const templatesApi = {
   delete: (id: string) => http.delete(`/templates/${id}`),
   duplicate: (id: string) => http.post<Template>(`/templates/${id}/duplicate`),
   setDefault: (id: string) => http.patch<Template>(`/templates/${id}/default`),
+  categories: () => http.get<{ category: string; count: number }[]>('/templates/categories'),
 };

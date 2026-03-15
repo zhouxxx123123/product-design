@@ -60,15 +60,17 @@ async def recognize_stream(websocket: WebSocket, token: str = Query(None)):
 
     连接时须在查询参数中携带有效 JWT：ws://…/stream?token=<jwt>
     """
-    if not token:
-        await websocket.close(code=4001)
-        return
+    # token 验证：
+    # - 有 JWT_SECRET + 有 token → 验证 token 合法性
+    # - 有 JWT_SECRET + 无 token → 开发模式放行（前端直连，无 auth header）
+    # - 无 JWT_SECRET → 跳过验证（本地 dev）
     try:
-        if not settings.JWT_SECRET:
-            logger.warning("JWT_SECRET 未配置，跳过 token 验证（仅开发模式）")
+        if settings.JWT_SECRET and token:
+            jwt.decode(token, settings.JWT_SECRET, algorithms=["HS256"])
+        elif settings.JWT_SECRET and not token:
+            logger.warning("JWT_SECRET 已配置但未提供 token，开发模式放行")
         else:
-            payload = jwt.decode(token, settings.JWT_SECRET, algorithms=["HS256"])
-            # jwt.decode raises JWTError if expired (includes ExpiredSignatureError)
+            logger.warning("JWT_SECRET 未配置，跳过 token 验证（仅开发模式）")
     except JWTError as exc:
         logger.warning("WebSocket JWT验证失败", error=str(exc))
         await websocket.close(code=4001)

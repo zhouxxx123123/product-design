@@ -29,7 +29,6 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { JwtUser } from '../auth/strategies/jwt.strategy';
 import { AiProxyService } from './ai-proxy.service';
 import { ChatDto } from './dto/chat.dto';
-import { GenerateComponentDto } from './dto/component.dto';
 import { InsightProxyDto } from './dto/insight.dto';
 import { GenerateOutlineDto, OptimizeOutlineDto } from './dto/outline.dto';
 
@@ -111,17 +110,6 @@ export class AiProxyController {
   @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
   async optimizeOutline(@Body() dto: OptimizeOutlineDto): Promise<unknown> {
     return this.aiProxyService.optimizeOutline(dto);
-  }
-
-  @Post('component/generate')
-  @ApiOperation({
-    summary: 'AI 生成 UI 组件 Schema（Copilot 动态卡片）',
-  })
-  @ApiResponse({ status: 200, description: '生成的组件 Schema' })
-  @HttpCode(HttpStatus.OK)
-  @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
-  async generateComponent(@Body() dto: GenerateComponentDto): Promise<unknown> {
-    return this.aiProxyService.generateComponent(dto);
   }
 
   @Post('asr/recognize')

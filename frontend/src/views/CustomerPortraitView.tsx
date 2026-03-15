@@ -28,6 +28,7 @@ import { useToastStore } from '../stores/toastStore';
 import { ViewType, ChatMessage } from '../types';
 import { clientsApi } from '../services/clients';
 import { llmApi } from '../services/llm';
+import { casesApi } from '../services/cases';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -88,6 +89,16 @@ const CustomerPortraitView: React.FC<CustomerPortraitProps> = ({ customerId, onB
     enabled: !!customerId,
   });
 
+  // Fetch similar cases based on client industry and tags
+  const { data: similarCasesData } = useQuery({
+    queryKey: ['similar-cases', client?.industry, client?.tags],
+    queryFn: () => casesApi.similar({
+      text: [client!.industry ?? '', ...(client!.tags ?? [])].join(' '),
+      limit: 3
+    }).then(r => r.data),
+    enabled: !!client?.id,
+  });
+
   // Derived display values — undefined when still loading.
   const displayName     = client?.companyName;
   const displayIndustry = client?.industry;
@@ -98,6 +109,9 @@ const CustomerPortraitView: React.FC<CustomerPortraitProps> = ({ customerId, onB
   const portraitScore   = aiPortrait?.score   ?? null;
   const portraitNeeds   = aiPortrait?.needs   ?? null;
   const portraitRisks   = aiPortrait?.risks   ?? null;
+
+  // Recommended cases from API
+  const recommendedCases = similarCasesData?.data ?? [];
 
   // ── AI portrait generation handler ──
 
@@ -577,18 +591,28 @@ const CustomerPortraitView: React.FC<CustomerPortraitProps> = ({ customerId, onB
               推荐匹配案例
             </h3>
             <div className="space-y-4">
-              {[
-                { title: '某跨国银行合规自动化', match: '98%', tag: '高匹配' },
-                { title: '电商巨头跨境结算优化', match: '85%', tag: '行业相关' },
-              ].map((item, i) => (
-                <div key={i} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-100 transition-all cursor-pointer group">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{item.title}</div>
-                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{item.match}</span>
+              {recommendedCases.length > 0 ? (
+                recommendedCases.map((case_, i) => (
+                  <div key={i} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-100 transition-all cursor-pointer group">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{case_.title}</div>
+                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                        {Math.round((case_.similarity ?? 0) * 100)}%
+                      </span>
+                    </div>
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+                      {case_.tags?.slice(0, 2).join(' · ') || '相关案例'}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      {case_.summary?.substring(0, 60) || '暂无摘要'}
+                    </div>
                   </div>
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.tag}</div>
+                ))
+              ) : (
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+                  <div className="text-sm text-slate-400">暂无相关案例</div>
                 </div>
-              ))}
+              )}
               <button
                 onClick={() => navigate('/cases')}
                 className="w-full py-3 border border-slate-200 rounded-2xl text-xs font-bold text-slate-500 hover:bg-slate-50 transition-all"

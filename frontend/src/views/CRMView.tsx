@@ -145,6 +145,9 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
   const { data: industries = [], isLoading: isLoadingIndustries } = useDictionaryChildren('industry');
   const { data: companySizes = [], isLoading: isLoadingCompanySizes } = useDictionaryChildren('company_size');
 
+  // Status mapping
+  const statusLabels: Record<string, string> = { active: '活跃', potential: '潜在', churned: '流失' };
+
   const customers: Customer[] = (clientsData?.data ?? [])
     .filter(c => selectedSizes.length === 0 || selectedSizes.includes(c.size ?? ''))
     .map(c => ({
@@ -156,8 +159,8 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
       email: c.contacts?.[0]?.email ?? '',
       phone: c.contacts?.[0]?.phone ?? '',
       tags: c.tags ?? [],
-      status: c.status === 'active' ? '活跃' : c.status === 'potential' ? '潜在' : c.status === 'churned' ? '流失' : '潜在',
-      lastInteraction: c.lastInteraction ? dayjs(c.lastInteraction).fromNow() : '暂无记录',
+      status: (statusLabels[c.status] ?? c.status ?? '—') as Customer['status'],
+      lastInteraction: c.lastInteraction ? dayjs(c.lastInteraction).format('YYYY-MM-DD') : '—',
     }));
 
   const createClientMutation = useMutation({

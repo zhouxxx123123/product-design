@@ -85,7 +85,7 @@ const SurveyTemplatesView: React.FC<SurveyTemplatesViewProps> = ({ onViewChange 
   // Fetch template categories from API
   const { data: categoryData = [] } = useQuery({
     queryKey: ['template-categories'],
-    queryFn: () => http.get('/templates/categories').then(r => r.data),
+    queryFn: () => templatesApi.categories().then(r => r.data),
   });
 
   // Build categories list: ['全部', ...API categories]
@@ -120,10 +120,10 @@ const SurveyTemplatesView: React.FC<SurveyTemplatesViewProps> = ({ onViewChange 
     id: t.id,
     title: t.title,
     category: t.category ?? '',
-    duration: '-- min',
-    sections: t.sections?.length ?? 0,
-    questions: t.sections?.reduce((acc, s) => acc + (s.questions?.length ?? 0), 0) ?? 0,
-    updatedAt: t.createdAt,
+    duration: t.duration ? `${t.duration}分钟` : '--',
+    sections: (t.content as any)?.sections?.length ?? 0,
+    questions: ((t.content as any)?.sections ?? []).reduce((acc: number, s: any) => acc + (s.questions?.length ?? 0), 0),
+    updatedAt: t.updatedAt ?? t.createdAt,
     usage: 0,
     isDefault: t.isDefault ?? false,
   }));

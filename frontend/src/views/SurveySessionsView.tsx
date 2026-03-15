@@ -106,19 +106,29 @@ const SurveySessionsView: React.FC<SurveySessionsProps> = ({ onViewChange }) => 
     queryKey: ['sessions'],
     queryFn: () => sessionsApi.list().then(r => r.data),
   });
+
+  const sessionStatusLabels: Record<string, string> = {
+    scheduled: '已预约',
+    in_progress: '进行中',
+    paused: '暂停',
+    completed: '已完成',
+    cancelled: '已取消',
+    archived: '已归档',
+  };
+
   const sessions = (sessionsData?.data ?? []).map(s => ({
     id: s.id,
     title: s.title,
     customer: clients.find(c => c.id === s.clientId)?.name ?? '—',
     date: s.interviewDate ?? s.createdAt,
-    status: s.status === 'in_progress' ? '进行中' : s.status === 'completed' ? '已完成' : '已预约',
-    duration: '--',
+    status: sessionStatusLabels[s.status] ?? s.status,
+    duration: s.plannedDurationMinutes ? `${s.plannedDurationMinutes}分钟` : '--',
     rawStatus: s.status,
     description: s.description ?? undefined,
   }));
 
   // Calculate stats from real data
-  const activeCount = sessions.filter(s => s.rawStatus === 'in_progress').length;
+  const activeCount = sessions.filter(s => s.rawStatus === 'in_progress' || s.rawStatus === 'paused').length;
   const completedToday = sessions.filter(s => {
     if (s.rawStatus !== 'completed') return false;
     const sessionDate = new Date(s.date).toDateString();
@@ -141,6 +151,9 @@ const SurveySessionsView: React.FC<SurveySessionsProps> = ({ onViewChange }) => 
       case '已完成': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
       case '进行中': return 'bg-indigo-50 text-indigo-600 border-indigo-100';
       case '已预约': return 'bg-amber-50 text-amber-600 border-amber-100';
+      case '暂停': return 'bg-orange-50 text-orange-600 border-orange-100';
+      case '已取消': return 'bg-red-50 text-red-600 border-red-100';
+      case '已归档': return 'bg-slate-50 text-slate-600 border-slate-100';
       default: return 'bg-slate-50 text-slate-600 border-slate-100';
     }
   };

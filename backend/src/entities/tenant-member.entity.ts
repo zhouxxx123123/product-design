@@ -1,10 +1,4 @@
-import {
-  Entity,
-  Column,
-  Index,
-  PrimaryGeneratedColumn,
-  CreateDateColumn,
-} from 'typeorm';
+import { Entity, Column, Index, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
 
 export enum MemberRole {
   OWNER = 'owner',
@@ -18,7 +12,7 @@ export enum MemberRole {
  * 多对多关系的中间表
  */
 @Entity('tenant_members')
-@Index(['tenant_id', 'user_id'], { unique: true })
+@Index(['tenantId', 'userId'], { unique: true })
 export class TenantMemberEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;

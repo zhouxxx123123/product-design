@@ -15,7 +15,7 @@ import {
  * 访谈模板中的部门配置
  */
 @Entity('interview_departments')
-@Index(['session_id', 'sort_order'])
+@Index(['sessionId', 'sortOrder'])
 export class InterviewDepartmentEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;

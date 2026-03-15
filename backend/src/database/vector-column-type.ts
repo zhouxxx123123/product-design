@@ -34,7 +34,7 @@ export const VectorTransformer: ValueTransformer = {
     // 去掉方括号并分割
     const clean = value.replace(/[\[\]]/g, '');
     if (!clean) return [];
-    return clean.split(',').map(v => {
+    return clean.split(',').map((v) => {
       const num = parseFloat(v.trim());
       if (isNaN(num)) {
         throw new Error(`Invalid vector value: ${v}`);
@@ -114,9 +114,9 @@ export function cosineSimilarityFromDistance(distance: number): number {
  */
 export function validateVectorDimensions(
   vector: number[],
-  expectedDimensions: number = 1536
+  expectedDimensions: number = 1536,
 ): boolean {
   if (!Array.isArray(vector)) return false;
   if (vector.length !== expectedDimensions) return false;
-  return vector.every(v => typeof v === 'number' && !isNaN(v));
+  return vector.every((v) => typeof v === 'number' && !isNaN(v));
 }

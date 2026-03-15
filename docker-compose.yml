@@ -7,9 +7,9 @@ services:
     container_name: liuguang-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
-      POSTGRES_DB: ${DB_NAME:-liuguang}
+      POSTGRES_USER: ${DB_USER:-openclaw}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-openclaw_dev_password}
+      POSTGRES_DB: ${DB_NAME:-openclaw_dev}
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -17,7 +17,7 @@ services:
     ports:
       - "${DB_PORT:-5432}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-liuguang}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-openclaw} -d ${DB_NAME:-openclaw_dev}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -80,6 +80,27 @@ services:
     networks:
       - liuguang-network
 
+  # 数据库迁移（一次性任务，backend 启动前运行）
+  backend-migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: liuguang-backend-migrate
+    restart: "no"
+    command: npm run migration:run:prod
+    environment:
+      NODE_ENV: production
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-openclaw}
+      DB_PASSWORD: ${DB_PASSWORD:-openclaw_dev_password}
+      DB_NAME: ${DB_NAME:-openclaw_dev}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - liuguang-network
+
   # NestJS 后端服务
   backend:
     build:
@@ -88,15 +109,20 @@ services:
     container_name: liuguang-backend
     restart: unless-stopped
     environment:
-      NODE_ENV: ${NODE_ENV:-development}
+      NODE_ENV: production
+      CORS_ORIGIN: http://localhost:5173
       PORT: 3000
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-password}
-      DB_NAME: ${DB_NAME:-liuguang}
+      DB_USER: ${DB_USER:-openclaw}
+      DB_PASSWORD: ${DB_PASSWORD:-openclaw_dev_password}
+      DB_NAME: ${DB_NAME:-openclaw_dev}
       REDIS_URL: redis://redis:6379/0
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-here}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your-refresh-secret-key-here}
+      JWT_EXPIRY: ${JWT_EXPIRY:-15m}
+      JWT_REFRESH_EXPIRY: ${JWT_REFRESH_EXPIRY:-7d}
+      MOONSHOT_API_KEY: ${MOONSHOT_API_KEY}
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
@@ -111,8 +137,9 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      backend-migrate:
+        condition: service_completed_successfully
     volumes:
-      - ./backend/src:/app/src
       - backend_node_modules:/app/node_modules
     networks:
       - liuguang-network
@@ -125,9 +152,9 @@ services:
     container_name: liuguang-ai
     restart: unless-stopped
     environment:
-      DEBUG: ${DEBUG:-true}
+      DEBUG: ${DEBUG:-false}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      DATABASE_URL: postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-liuguang}
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-openclaw}:${DB_PASSWORD:-openclaw_dev_password}@postgres:5432/${DB_NAME:-openclaw_dev}
       REDIS_URL: redis://redis:6379/0
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
@@ -136,6 +163,9 @@ services:
       TENCENT_SECRET_ID: ${TENCENT_SECRET_ID}
       TENCENT_SECRET_KEY: ${TENCENT_SECRET_KEY}
       TENCENT_REGION: ${TENCENT_REGION:-ap-beijing}
+      ASR_PROVIDER: ${ASR_PROVIDER:-whisper}
+      WHISPER_MODEL_SIZE: ${WHISPER_MODEL_SIZE:-small}
+      WHISPER_MODEL_DIR: /opt/models/whisper
       MOONSHOT_API_KEY: ${MOONSHOT_API_KEY}
       MOONSHOT_BASE_URL: ${MOONSHOT_BASE_URL:-https://api.moonshot.cn/v1}
       MOONSHOT_MODEL: ${MOONSHOT_MODEL:-kimi-k2.5}
@@ -143,6 +173,8 @@ services:
       CELERY_RESULT_BACKEND: redis://redis:6379/0
     ports:
       - "${AI_PORT:-8000}:8000"
+    volumes:
+      - whisper_models:/opt/models/whisper
     depends_on:
       postgres:
         condition: service_healthy
@@ -150,8 +182,6 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-    volumes:
-      - ./ai:/app
     networks:
       - liuguang-network
 
@@ -163,14 +193,31 @@ services:
     container_name: liuguang-celery-worker
     restart: unless-stopped
     command: celery -A celery_tasks worker --loglevel=info --concurrency=4
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A celery_tasks inspect ping -d celery@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
     environment:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
-      DATABASE_URL: postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-liuguang}
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-openclaw}:${DB_PASSWORD:-openclaw_dev_password}@postgres:5432/${DB_NAME:-openclaw_dev}
       REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-liuguang}
+      ASR_PROVIDER: ${ASR_PROVIDER:-whisper}
+      WHISPER_MODEL_SIZE: ${WHISPER_MODEL_SIZE:-small}
+      WHISPER_MODEL_DIR: /opt/models/whisper
+      TENCENT_REGION: ${TENCENT_REGION:-ap-beijing}
       TENCENT_SECRET_ID: ${TENCENT_SECRET_ID}
       TENCENT_SECRET_KEY: ${TENCENT_SECRET_KEY}
       MOONSHOT_API_KEY: ${MOONSHOT_API_KEY}
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-here}
+    volumes:
+      - whisper_models:/opt/models/whisper
     depends_on:
       - redis
       - postgres
@@ -185,9 +232,20 @@ services:
     container_name: liuguang-celery-beat
     restart: unless-stopped
     command: celery -A celery_tasks beat --loglevel=info
+    healthcheck:
+      test: ["CMD-SHELL", "cat /proc/1/cmdline | tr '\\0' ' ' | grep -q 'celery' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     environment:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-openclaw}:${DB_PASSWORD:-openclaw_dev_password}@postgres:5432/${DB_NAME:-openclaw_dev}
+      REDIS_URL: redis://redis:6379/0
+      MOONSHOT_API_KEY: ${MOONSHOT_API_KEY}
+      TENCENT_SECRET_ID: ${TENCENT_SECRET_ID}
+      TENCENT_SECRET_KEY: ${TENCENT_SECRET_KEY}
     depends_on:
       - redis
     networks:
@@ -208,20 +266,15 @@ services:
     networks:
       - liuguang-network
 
-  # React 前端 (开发模式)
+  # React 前端 (nginx 生产构建)
   frontend:
-    image: node:20-alpine
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: liuguang-frontend
-    working_dir: /app
-    command: sh -c "npm install && npm run dev -- --host"
-    environment:
-      VITE_API_URL: http://localhost:3000
-      VITE_WS_URL: ws://localhost:3000
+    restart: unless-stopped
     ports:
-      - "${FRONTEND_PORT:-5173}:5173"
-    volumes:
-      - ./frontend:/app
-      - frontend_node_modules:/app/node_modules
+      - "${FRONTEND_PORT:-5173}:80"
     depends_on:
       - backend
     networks:
@@ -232,7 +285,7 @@ volumes:
   redis_data:
   minio_data:
   backend_node_modules:
-  frontend_node_modules:
+  whisper_models:
 
 networks:
   liuguang-network:

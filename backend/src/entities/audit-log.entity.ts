@@ -1,10 +1,4 @@
-import {
-  Entity,
-  Column,
-  Index,
-  PrimaryGeneratedColumn,
-  CreateDateColumn,
-} from 'typeorm';
+import { Entity, Column, Index, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
 
 export enum AuditAction {
   CREATE = 'create',
@@ -25,10 +19,10 @@ export enum AuditAction {
  * append-only表，不包含updated_at和deleted_at
  */
 @Entity('audit_logs')
-@Index(['tenant_id', 'created_at'])
+@Index(['tenantId', 'createdAt'])
 @Index(['action'])
-@Index(['entity_type', 'entity_id'])
-@Index(['user_id'])
+@Index(['entityType', 'entityId'])
+@Index(['userId'])
 export class AuditLogEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -52,10 +46,10 @@ export class AuditLogEntity {
   entityId: string;
 
   @Column({ type: 'jsonb', nullable: true, name: 'old_values' })
-  oldValues: Record<string, any> | null;
+  oldValues: Record<string, unknown> | null;
 
   @Column({ type: 'jsonb', nullable: true, name: 'new_values' })
-  newValues: Record<string, any> | null;
+  newValues: Record<string, unknown> | null;
 
   @Column({ type: 'inet', nullable: true, name: 'ip_address' })
   ipAddress: string | null;

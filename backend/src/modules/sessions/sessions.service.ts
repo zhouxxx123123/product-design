@@ -61,11 +61,10 @@ export class SessionsService {
     // Add aggregation counts via subqueries
     qb.addSelect(
       '(SELECT COUNT(*) FROM session_insights si WHERE si.session_id = s.id)',
-      's_insightsCount'
-    )
-    .addSelect(
+      's_insightsCount',
+    ).addSelect(
       '(SELECT COUNT(*) FROM session_comments sc WHERE sc.session_id = s.id)',
-      's_commentsCount'
+      's_commentsCount',
     );
 
     const [data, total] = await qb

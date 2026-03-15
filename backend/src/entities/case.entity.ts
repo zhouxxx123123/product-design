@@ -28,11 +28,11 @@ export enum CaseStatus {
  * 支持向量搜索
  */
 @Entity('cases')
-@Index(['tenant_id', 'industry'])
-@Index(['tenant_id', 'case_type'])
-@Index(['is_public'])
+@Index(['tenantId', 'industry'])
+@Index(['tenantId', 'caseType'])
+@Index(['isPublic'])
 @Index(['status'])
-@Index(['tenant_id', 'created_at'])
+@Index(['tenantId', 'createdAt'])
 export class CaseEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -67,7 +67,7 @@ export class CaseEntity {
   tags: string[];
 
   @Column({ type: 'jsonb', default: {} })
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 
   @Column({ type: 'boolean', name: 'is_public', default: false })
   isPublic: boolean;

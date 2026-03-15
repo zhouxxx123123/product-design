@@ -31,10 +31,10 @@ export enum InsightStatus {
  * AI生成的访谈洞察
  */
 @Entity('insights')
-@Index(['session_id', 'category'])
+@Index(['sessionId', 'category'])
 @Index(['category'])
 @Index(['status'])
-@Index(['tenant_id', 'category'])
+@Index(['tenantId', 'category'])
 export class InsightEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -73,7 +73,7 @@ export class InsightEntity {
   status: InsightStatus;
 
   @Column({ type: 'jsonb', default: {} })
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 
   @Column({ type: 'uuid', name: 'reviewed_by', nullable: true })
   reviewedBy: string | null;

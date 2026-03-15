@@ -85,6 +85,9 @@ export class InterviewSessionEntity {
   @Column({ type: 'varchar', length: 50, nullable: true })
   language: string | null;
 
+  @Column({ type: 'uuid', name: 'template_id', nullable: true })
+  templateId: string | null;
+
   @Column({ type: 'uuid', name: 'recording_file_id', nullable: true })
   recordingFileId: string | null;
 

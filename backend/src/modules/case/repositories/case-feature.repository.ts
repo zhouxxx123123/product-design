@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { CaseFeatureEntity } from '../../../entities/case-feature.entity';
 import { CaseEntity } from '../../../entities/case.entity';
-import { buildVectorString, cosineSimilarityFromDistance } from '../../../database/vector-column-type';
+import { buildVectorString } from '../../../database/vector-column-type';
 
 /**
  * 案例要素Repository
@@ -30,12 +30,14 @@ export class CaseFeatureRepository extends Repository<CaseFeatureEntity> {
       category?: string;
       limit?: number;
       minSimilarity?: number;
-    } = {}
-  ): Promise<Array<{
-    feature: CaseFeatureEntity;
-    caseItem: Partial<CaseEntity>;
-    similarity: number;
-  }>> {
+    } = {},
+  ): Promise<
+    Array<{
+      feature: CaseFeatureEntity;
+      caseItem: Partial<CaseEntity>;
+      similarity: number;
+    }>
+  > {
     const { category, limit = 20, minSimilarity = 0.7 } = options;
     const vectorStr = buildVectorString(queryVector);
 
@@ -65,7 +67,7 @@ export class CaseFeatureRepository extends Repository<CaseFeatureEntity> {
         AND 1 - (cf.embedding <=> $1::vector) >= $3
     `;
 
-    const params: any[] = [vectorStr, tenantId, minSimilarity];
+    const params: (string | number)[] = [vectorStr, tenantId, minSimilarity];
 
     if (category) {
       sql += ` AND cf.category = $${params.length + 1}`;
@@ -80,28 +82,32 @@ export class CaseFeatureRepository extends Repository<CaseFeatureEntity> {
 
     const results = await this.dataSource.query(sql, params);
 
-    return results.map(row => ({
-      feature: this.manager.create(CaseFeatureEntity, {
-        id: row.id,
-        caseId: row.case_id,
-        category: row.category,
-        content: row.content,
-        summary: row.summary,
-        importanceScore: row.importance_score,
-        sortOrder: row.sort_order,
-        metadata: row.metadata,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        deletedAt: row.deleted_at,
-      }),
-      caseItem: {
-        id: row.case_id_ref,
-        title: row.case_title,
-        industry: row.case_industry,
-        caseType: row.case_case_type,
-      },
-      similarity: parseFloat(row.similarity),
-    }));
+    return (results as Record<string, unknown>[]).map((row) => {
+      const feature = this.manager.create(CaseFeatureEntity);
+      Object.assign(feature, {
+        id: row['id'],
+        caseId: row['case_id'],
+        category: row['category'],
+        content: row['content'],
+        summary: row['summary'],
+        importanceScore: row['importance_score'],
+        sortOrder: row['sort_order'],
+        metadata: row['metadata'],
+        createdAt: row['created_at'],
+        updatedAt: row['updated_at'],
+        deletedAt: row['deleted_at'],
+      });
+      return {
+        feature,
+        caseItem: {
+          id: row['case_id_ref'] as string | undefined,
+          title: row['case_title'] as string | undefined,
+          industry: row['case_industry'] as string | undefined,
+          caseType: row['case_case_type'] as CaseEntity['caseType'] | undefined,
+        } as Partial<CaseEntity>,
+        similarity: parseFloat(row['similarity'] as string),
+      };
+    });
   }
 
   /**
@@ -115,7 +121,7 @@ export class CaseFeatureRepository extends Repository<CaseFeatureEntity> {
   async findMostRelevantInCase(
     caseId: string,
     queryVector: number[],
-    limit: number = 5
+    limit: number = 5,
   ): Promise<Array<CaseFeatureEntity & { similarity: number }>> {
     const vectorStr = buildVectorString(queryVector);
 
@@ -131,36 +137,36 @@ export class CaseFeatureRepository extends Repository<CaseFeatureEntity> {
       ORDER BY embedding <=> $1::vector
       LIMIT $3
       `,
-      [vectorStr, caseId, limit]
+      [vectorStr, caseId, limit],
     );
 
-    return results.map(row => ({
-      ...this.manager.create(CaseFeatureEntity, {
-        ...row,
-        caseId: row.case_id,
-        importanceScore: row.importance_score,
-        sortOrder: row.sort_order,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        deletedAt: row.deleted_at,
-      }),
-      similarity: parseFloat(row.similarity),
-    }));
+    return (results as Record<string, unknown>[]).map((row) => {
+      const entity = this.manager.create(CaseFeatureEntity);
+      Object.assign(entity, row, {
+        caseId: row['case_id'],
+        importanceScore: row['importance_score'],
+        sortOrder: row['sort_order'],
+        createdAt: row['created_at'],
+        updatedAt: row['updated_at'],
+        deletedAt: row['deleted_at'],
+      });
+      return {
+        ...entity,
+        similarity: parseFloat(row['similarity'] as string),
+      } as CaseFeatureEntity & { similarity: number };
+    });
   }
 
   /**
    * 批量更新要素embedding
    */
-  async updateEmbedding(
-    featureId: string,
-    embedding: number[]
-  ): Promise<void> {
+  async updateEmbedding(featureId: string, embedding: number[]): Promise<void> {
     const vectorStr = buildVectorString(embedding);
 
-    await this.dataSource.query(
-      'UPDATE case_features SET embedding = $1::vector WHERE id = $2',
-      [vectorStr, featureId]
-    );
+    await this.dataSource.query('UPDATE case_features SET embedding = $1::vector WHERE id = $2', [
+      vectorStr,
+      featureId,
+    ]);
   }
 
   /**

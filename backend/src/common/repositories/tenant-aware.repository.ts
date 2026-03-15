@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Repository, DataSource, FindManyOptions, FindOneOptions } from 'typeorm';
+import { Repository, DataSource, FindManyOptions, FindOneOptions, ObjectLiteral } from 'typeorm';
 
 /**
  * 租户感知的基础Repository
@@ -16,10 +16,10 @@ import { Repository, DataSource, FindManyOptions, FindOneOptions } from 'typeorm
  * ```
  */
 @Injectable()
-export abstract class TenantAwareRepository<T> extends Repository<T> {
+export abstract class TenantAwareRepository<T extends ObjectLiteral> extends Repository<T> {
   constructor(
     protected readonly dataSource: DataSource,
-    entity: new () => T
+    entity: new () => T,
   ) {
     super(entity, dataSource.createEntityManager());
   }
@@ -29,12 +29,8 @@ export abstract class TenantAwareRepository<T> extends Repository<T> {
    * 影响RLS策略执行
    */
   async setTenantContext(tenantId: string, isSuper: boolean = false): Promise<void> {
-    await this.dataSource.query(
-      `SET LOCAL app.current_tenant_id = '${tenantId}'`
-    );
-    await this.dataSource.query(
-      `SET LOCAL app.is_super_tenant = '${isSuper}'`
-    );
+    await this.dataSource.query(`SET LOCAL app.current_tenant_id = '${tenantId}'`);
+    await this.dataSource.query(`SET LOCAL app.is_super_tenant = '${isSuper}'`);
   }
 
   /**
@@ -44,7 +40,7 @@ export abstract class TenantAwareRepository<T> extends Repository<T> {
   async withTenant<R>(
     tenantId: string,
     operation: () => Promise<R>,
-    isSuper: boolean = false
+    isSuper: boolean = false,
   ): Promise<R> {
     await this.setTenantContext(tenantId, isSuper);
     try {
@@ -59,41 +55,25 @@ export abstract class TenantAwareRepository<T> extends Repository<T> {
   /**
    * 在指定租户上下文中查询
    */
-  async findInTenant(
-    tenantId: string,
-    options?: FindManyOptions<T>
-  ): Promise<T[]> {
+  async findInTenant(tenantId: string, options?: FindManyOptions<T>): Promise<T[]> {
     return this.withTenant(tenantId, () => this.find(options));
   }
 
   /**
    * 在指定租户上下文中查询单个
    */
-  async findOneInTenant(
-    tenantId: string,
-    options?: FindOneOptions<T>
-  ): Promise<T | null> {
+  async findOneInTenant(tenantId: string, options: FindOneOptions<T>): Promise<T | null> {
     return this.withTenant(tenantId, () => this.findOne(options));
   }
 
   /**
    * 安全创建 - 自动设置tenant_id
    */
-  async createInTenant(
-    tenantId: string,
-    entityData: Partial<T>
-  ): Promise<T> {
+  async createInTenant(tenantId: string, entityData: Partial<T>): Promise<T> {
     const entity = this.create({
       ...entityData,
       tenantId,
-    } as DeepPartial<T>);
-    return this.save(entity);
+    } as unknown as Parameters<typeof this.create>[0]);
+    return this.save(entity) as Promise<T>;
   }
 }
-
-/**
- * DeepPartial类型辅助
- */
-type DeepPartial<T> = {
-  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
-};

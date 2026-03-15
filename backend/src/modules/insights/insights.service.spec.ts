@@ -29,7 +29,9 @@ function makeInsight(overrides: Partial<SessionInsightEntity> = {}): SessionInsi
   return Object.assign(i, overrides);
 }
 
-function makeTranscriptSegment(overrides: Partial<TranscriptSegmentEntity> = {}): TranscriptSegmentEntity {
+function makeTranscriptSegment(
+  overrides: Partial<TranscriptSegmentEntity> = {},
+): TranscriptSegmentEntity {
   const s = new TranscriptSegmentEntity();
   s.id = 'segment-uuid-001';
   s.sessionId = SESSION_ID;
@@ -340,7 +342,10 @@ describe('InsightsService', () => {
         interview_id: SESSION_ID,
       });
 
-      expect(insightRepo.delete).toHaveBeenCalledWith({ sessionId: SESSION_ID, tenantId: TENANT_ID });
+      expect(insightRepo.delete).toHaveBeenCalledWith({
+        sessionId: SESSION_ID,
+        tenantId: TENANT_ID,
+      });
       expect(insightRepo.save).toHaveBeenCalled();
       expect(result).toBe(savedInsights);
     });
@@ -348,9 +353,9 @@ describe('InsightsService', () => {
     it('throws BadRequestException when no transcript segments exist', async () => {
       transcriptRepo.find.mockResolvedValue([]);
 
-      await expect(
-        service.extractFromSession(SESSION_ID, TENANT_ID, USER_ID),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.extractFromSession(SESSION_ID, TENANT_ID, USER_ID)).rejects.toThrow(
+        BadRequestException,
+      );
 
       expect(transcriptRepo.find).toHaveBeenCalledWith({
         where: { sessionId: SESSION_ID, tenantId: TENANT_ID },
@@ -366,7 +371,10 @@ describe('InsightsService', () => {
 
       const result = await service.extractFromSession(SESSION_ID, TENANT_ID, USER_ID);
 
-      expect(insightRepo.delete).toHaveBeenCalledWith({ sessionId: SESSION_ID, tenantId: TENANT_ID });
+      expect(insightRepo.delete).toHaveBeenCalledWith({
+        sessionId: SESSION_ID,
+        tenantId: TENANT_ID,
+      });
       expect(result).toEqual([]);
     });
 
@@ -424,9 +432,7 @@ describe('InsightsService', () => {
 
       await service.extractFromSession(SESSION_ID, TENANT_ID, USER_ID);
 
-      expect(insightRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ layer: 1 }),
-      );
+      expect(insightRepo.create).toHaveBeenCalledWith(expect.objectContaining({ layer: 1 }));
     });
 
     it('normalizes non-object content to { text: string }', async () => {
@@ -461,9 +467,7 @@ describe('InsightsService', () => {
     });
 
     it('handles transcript segments with null speaker', async () => {
-      const segments = [
-        makeTranscriptSegment({ speaker: null, text: 'Anonymous message' }),
-      ];
+      const segments = [makeTranscriptSegment({ speaker: null, text: 'Anonymous message' })];
       transcriptRepo.find.mockResolvedValue(segments);
       mockAiProxyService.extractInsight.mockResolvedValue([]);
       insightRepo.save.mockResolvedValue([]);

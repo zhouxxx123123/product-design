@@ -12,11 +12,11 @@
  */
 export enum UserRole {
   /** 管理员 - 中科琉光员工，拥有完整权限 */
-  ADMIN = 'ADMIN',
+  ADMIN = 'admin',
   /** 销售 - 渠道公司销售代表，可执行访谈 */
-  SALES = 'SALES',
+  SALES = 'sales',
   /** 专家 - 中科琉光顾问，可查看所有会话并撰写解决方案 */
-  EXPERT = 'EXPERT',
+  EXPERT = 'expert',
 }
 
 /**

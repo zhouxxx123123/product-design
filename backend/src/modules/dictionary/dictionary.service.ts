@@ -2,21 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
 import { DictionaryNodeEntity } from '../../entities/dictionary-node.entity';
-
-export interface CreateDictionaryNodeDto {
-  name: string;
-  code?: string;
-  parentId?: string;
-  description?: string;
-  sortOrder?: number;
-}
-
-export interface UpdateDictionaryNodeDto {
-  name?: string;
-  code?: string;
-  description?: string;
-  sortOrder?: number;
-}
+import { CreateDictionaryNodeDto, UpdateDictionaryNodeDto } from './dto/dictionary.dto';
 
 @Injectable()
 export class DictionaryService {

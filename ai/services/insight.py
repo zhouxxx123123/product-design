@@ -6,6 +6,7 @@ import structlog
 from typing import List, Dict, Optional
 
 from services.llm import llm_service
+from utils.json_parser import _parse_json_safe
 
 logger = structlog.get_logger(__name__)
 
@@ -14,17 +15,22 @@ class InsightService:
     """访谈洞察提取服务"""
 
     SYSTEM_PROMPT = """你是一位资深的用户研究员，擅长从访谈记录中提取有价值的洞察。
-请分析提供的访谈转录文本，提取：
-1. 关键主题和发现
-2. 有代表性的用户原话（引用）
-3. 情感倾向分析
-4. 行动建议
+请严格按照以下 JSON schema 返回结果，不要添加任何 markdown 代码块或额外说明，直接返回纯 JSON：
 
-输出要求：
-- 主题要有清晰的标题和描述
-- 引用要标注说话人
-- 洞察要有数据支撑
-- 提供可执行的改进建议"""
+{
+  "themes": [
+    {"title": "主题标题", "description": "详细描述", "evidence": ["证据1"]}
+  ],
+  "key_quotes": [
+    {"text": "原话内容", "speaker": "说话人", "insight": "洞察说明"}
+  ],
+  "sentiment": {
+    "label": "positive|neutral|negative",
+    "score": 0.0,
+    "breakdown": {"正面": 30, "中性": 20, "负面": 50}
+  },
+  "summary": "总体摘要文字"
+}"""
 
     async def extract_insights(
         self,
@@ -46,15 +52,15 @@ class InsightService:
 
         prompt = f"""请分析以下访谈记录并提取洞察：
 
-{transcript[:8000]}  # 限制输入长度
+{transcript[:8000]}
 
-请提取：
-1. 关键主题（3-5个）
-2. 重要引用（5-10条）
-3. 情感分析
-4. 总体摘要
+请严格按照 system prompt 中指定的 JSON schema 提取：
+- themes：3-5个关键主题
+- key_quotes：5-10条重要引用
+- sentiment：情感分析
+- summary：总体摘要（200字以内）
 
-按JSON格式返回。"""
+直接返回纯 JSON，不要包裹在代码块中。"""
 
         messages = [
             {"role": "system", "content": self.SYSTEM_PROMPT},
@@ -64,10 +70,22 @@ class InsightService:
         try:
             response = await llm_service.chat(messages, temperature=0.3)
             content = response["choices"][0]["message"]["content"]
-            # TODO: 解析JSON响应
+            parsed = _parse_json_safe(content)
+            if isinstance(parsed, dict):
+                return {
+                    "status": "success",
+                    "themes": parsed.get("themes", []),
+                    "key_quotes": parsed.get("key_quotes", []),
+                    "sentiment": parsed.get("sentiment", {}),
+                    "summary": parsed.get("summary", ""),
+                }
+            # Graceful fallback: LLM returned non-JSON text
             return {
                 "status": "success",
-                "content": content,
+                "themes": [],
+                "key_quotes": [],
+                "sentiment": {},
+                "summary": parsed if isinstance(parsed, str) else "",
             }
         except Exception as e:
             logger.error("洞察提取失败", error=str(e))

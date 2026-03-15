@@ -1,7 +1,7 @@
 import { DataSource } from 'typeorm';
 import { CaseFeatureRepository } from './case-feature.repository';
 import { CaseFeatureEntity, FeatureCategory } from '../../../entities/case-feature.entity';
-import { CaseEntity, CaseType } from '../../../entities/case.entity';
+import { CaseType } from '../../../entities/case.entity';
 import { buildVectorString } from '../../../database/vector-column-type';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -93,7 +93,7 @@ describe('CaseFeatureRepository', () => {
 
       expect(mockDataSource.query).toHaveBeenCalledWith(
         expect.not.stringContaining('AND cf.category ='),
-        [VECTOR_STRING, TENANT_ID, 0.7, 15]
+        [VECTOR_STRING, TENANT_ID, 0.7, 15],
       );
     });
 
@@ -108,7 +108,7 @@ describe('CaseFeatureRepository', () => {
 
       expect(mockDataSource.query).toHaveBeenCalledWith(
         expect.stringContaining('AND cf.category = $4'),
-        [VECTOR_STRING, TENANT_ID, 0.7, FeatureCategory.PAIN_POINT, 25]
+        [VECTOR_STRING, TENANT_ID, 0.7, FeatureCategory.PAIN_POINT, 25],
       );
     });
 
@@ -118,10 +118,12 @@ describe('CaseFeatureRepository', () => {
 
       // Test without category (4 params total)
       await repository.searchSimilarFeatures(TENANT_ID, TEST_VECTOR, { limit: 12 });
-      expect(mockDataSource.query).toHaveBeenLastCalledWith(
-        expect.stringContaining('LIMIT $4'),
-        [VECTOR_STRING, TENANT_ID, 0.7, 12]
-      );
+      expect(mockDataSource.query).toHaveBeenLastCalledWith(expect.stringContaining('LIMIT $4'), [
+        VECTOR_STRING,
+        TENANT_ID,
+        0.7,
+        12,
+      ]);
 
       jest.clearAllMocks();
 
@@ -130,10 +132,13 @@ describe('CaseFeatureRepository', () => {
         category: FeatureCategory.SOLUTION,
         limit: 18,
       });
-      expect(mockDataSource.query).toHaveBeenLastCalledWith(
-        expect.stringContaining('LIMIT $5'),
-        [VECTOR_STRING, TENANT_ID, 0.7, FeatureCategory.SOLUTION, 18]
-      );
+      expect(mockDataSource.query).toHaveBeenLastCalledWith(expect.stringContaining('LIMIT $5'), [
+        VECTOR_STRING,
+        TENANT_ID,
+        0.7,
+        FeatureCategory.SOLUTION,
+        18,
+      ]);
     });
 
     it('maps feature camelCase fields correctly', async () => {
@@ -199,10 +204,12 @@ describe('CaseFeatureRepository', () => {
 
       await repository.searchSimilarFeatures(TENANT_ID, TEST_VECTOR);
 
-      expect(mockDataSource.query).toHaveBeenCalledWith(
-        expect.any(String),
-        [VECTOR_STRING, TENANT_ID, 0.7, 20]
-      );
+      expect(mockDataSource.query).toHaveBeenCalledWith(expect.any(String), [
+        VECTOR_STRING,
+        TENANT_ID,
+        0.7,
+        20,
+      ]);
     });
 
     it('applies custom minSimilarity when provided', async () => {
@@ -211,10 +218,12 @@ describe('CaseFeatureRepository', () => {
 
       await repository.searchSimilarFeatures(TENANT_ID, TEST_VECTOR, { minSimilarity: 0.85 });
 
-      expect(mockDataSource.query).toHaveBeenCalledWith(
-        expect.any(String),
-        [VECTOR_STRING, TENANT_ID, 0.85, 20]
-      );
+      expect(mockDataSource.query).toHaveBeenCalledWith(expect.any(String), [
+        VECTOR_STRING,
+        TENANT_ID,
+        0.85,
+        20,
+      ]);
     });
 
     it('creates feature entity using manager.create', async () => {
@@ -247,7 +256,7 @@ describe('CaseFeatureRepository', () => {
 
       expect(mockDataSource.query).toHaveBeenCalledWith(
         expect.stringContaining('WHERE case_id = $2'),
-        [VECTOR_STRING, CASE_ID, 8]
+        [VECTOR_STRING, CASE_ID, 8],
       );
     });
 
@@ -285,10 +294,11 @@ describe('CaseFeatureRepository', () => {
 
       await repository.findMostRelevantInCase(CASE_ID, TEST_VECTOR);
 
-      expect(mockDataSource.query).toHaveBeenCalledWith(
-        expect.any(String),
-        [VECTOR_STRING, CASE_ID, 5]
-      );
+      expect(mockDataSource.query).toHaveBeenCalledWith(expect.any(String), [
+        VECTOR_STRING,
+        CASE_ID,
+        5,
+      ]);
     });
 
     it('parses similarity correctly', async () => {
@@ -321,7 +331,7 @@ describe('CaseFeatureRepository', () => {
 
       expect(mockDataSource.query).toHaveBeenCalledWith(
         'UPDATE case_features SET embedding = $1::vector WHERE id = $2',
-        [VECTOR_STRING, FEATURE_ID]
+        [VECTOR_STRING, FEATURE_ID],
       );
     });
 
@@ -331,10 +341,10 @@ describe('CaseFeatureRepository', () => {
 
       await repository.updateEmbedding('feat-123', customVector);
 
-      expect(mockDataSource.query).toHaveBeenCalledWith(
-        expect.any(String),
-        ['[1.5,2.7,3.9,4.1]', 'feat-123']
-      );
+      expect(mockDataSource.query).toHaveBeenCalledWith(expect.any(String), [
+        '[1.5,2.7,3.9,4.1]',
+        'feat-123',
+      ]);
     });
   });
 

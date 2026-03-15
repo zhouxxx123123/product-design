@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  CanActivate,
-  ExecutionContext,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { DataSource } from 'typeorm';
 
@@ -16,7 +11,7 @@ import { DataSource } from 'typeorm';
 export class TenantGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
-    private dataSource: DataSource
+    private dataSource: DataSource,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -49,28 +44,18 @@ export class TenantGuard implements CanActivate {
   /**
    * 设置PostgreSQL会话变量
    */
-  private async setTenantContext(
-    tenantId: string,
-    isSuper: boolean
-  ): Promise<void> {
-    await this.dataSource.query(
-      `SET LOCAL app.current_tenant_id = '${tenantId}'`
-    );
-    await this.dataSource.query(
-      `SET LOCAL app.is_super_tenant = '${isSuper}'`
-    );
+  private async setTenantContext(tenantId: string, isSuper: boolean): Promise<void> {
+    await this.dataSource.query(`SET LOCAL app.current_tenant_id = '${tenantId}'`);
+    await this.dataSource.query(`SET LOCAL app.is_super_tenant = '${isSuper}'`);
   }
 
   /**
    * 检查用户是否是租户成员
    */
-  private async checkTenantMembership(
-    userId: string,
-    tenantId: string
-  ): Promise<boolean> {
+  private async checkTenantMembership(userId: string, tenantId: string): Promise<boolean> {
     const result = await this.dataSource.query(
       `SELECT 1 FROM tenant_members WHERE user_id = $1 AND tenant_id = $2`,
-      [userId, tenantId]
+      [userId, tenantId],
     );
     return result.length > 0;
   }

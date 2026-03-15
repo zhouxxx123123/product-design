@@ -1,9 +1,29 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  const apiTarget = env.VITE_API_URL || 'http://localhost:4001';
+  const aiTarget = env.VITE_AI_URL || 'http://localhost:8000';
+
+  function makeProxyLogger(prefix: string) {
+    return (proxy: import('http-proxy').Server) => {
+      proxy.on('proxyReq', (_proxyReq, req) => {
+        console.log(`\x1b[36m[proxy → ${prefix}]\x1b[0m ${req.method} ${req.url}`);
+      });
+      proxy.on('proxyRes', (proxyRes, req) => {
+        const color = (proxyRes.statusCode ?? 0) >= 400 ? '\x1b[31m' : '\x1b[32m';
+        console.log(`${color}[proxy ← ${prefix}]\x1b[0m ${proxyRes.statusCode} ${req.url}`);
+      });
+      proxy.on('error', (err, req) => {
+        console.error(`\x1b[31m[proxy ERR ${prefix}]\x1b[0m ${(req as { url?: string }).url} — ${err.message}`);
+      });
+    };
+  }
+
+  return {
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
@@ -17,17 +37,19 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000,
+    port: 3001,
     host: true,
     proxy: {
       '/api': {
-        target: process.env.VITE_API_URL || 'http://localhost:4000',
+        target: apiTarget,
         changeOrigin: true,
+        configure: makeProxyLogger(`backend ${apiTarget}`),
       },
       '/ai': {
-        target: 'http://localhost:8000',
+        target: aiTarget,
         changeOrigin: true,
         rewrite: (path: string) => path.replace(/^\/ai/, '/api/v1'),
+        configure: makeProxyLogger(`ai ${aiTarget}`),
       },
     },
   },
@@ -41,4 +63,5 @@ export default defineConfig({
     setupFiles: ['./src/test-setup.ts'],
     testTimeout: 15000,
   },
+  };
 });

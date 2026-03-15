@@ -29,7 +29,7 @@ export enum QuestionStatus {
  * 访谈问题实体
  */
 @Entity('interview_questions')
-@Index(['department_id', 'sort_order'])
+@Index(['departmentId', 'sortOrder'])
 export class InterviewQuestionEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;

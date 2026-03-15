@@ -14,13 +14,17 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
       username: this.configService.get<string>('DB_USER', 'postgres'),
       password: this.configService.get<string>('DB_PASSWORD', 'password'),
       database: this.configService.get<string>('DB_NAME', 'liuguang'),
-      entities: [__dirname + '/../modules/**/*.entity{.ts,.js}'],
+      entities: [
+        __dirname + '/../entities/*.entity{.ts,.js}',
+        __dirname + '/../modules/**/*.entity{.ts,.js}',
+      ],
       migrations: [__dirname + '/../migrations/*{.ts,.js}'],
       migrationsTableName: 'migrations',
       migrationsRun: false,
       synchronize: false, // Never true in production
       logging: this.configService.get<string>('NODE_ENV') === 'development',
-      ssl: this.configService.get<string>('DB_SSL') === 'true' ? { rejectUnauthorized: false } : false,
+      ssl:
+        this.configService.get<string>('DB_SSL') === 'true' ? { rejectUnauthorized: false } : false,
     };
   }
 }

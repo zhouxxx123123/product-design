@@ -28,6 +28,7 @@ export class TenantEntity {
 
   @Column({
     type: 'jsonb',
+    name: 'ai_config',
     default: {
       provider: 'moonshot',
       model: 'kimi-k2.5',
@@ -43,7 +44,7 @@ export class TenantEntity {
   };
 
   @Column({ type: 'jsonb', default: {} })
-  settings: Record<string, any>;
+  settings: Record<string, unknown>;
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt: Date;

@@ -25,7 +25,7 @@ export enum FeatureCategory {
  * 案例的关键要素提取，支持要素级向量搜索
  */
 @Entity('case_features')
-@Index(['case_id', 'category'])
+@Index(['caseId', 'category'])
 @Index(['category'])
 export class CaseFeatureEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -37,7 +37,7 @@ export class CaseFeatureEntity {
   @Column({
     type: 'enum',
     enum: FeatureCategory,
-    default: FeatureCategory.INSIGHT,
+    default: FeatureCategory.PAIN_POINT,
   })
   category: FeatureCategory;
 
@@ -67,7 +67,7 @@ export class CaseFeatureEntity {
   embedding: string | null;
 
   @Column({ type: 'jsonb', default: {} })
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt: Date;

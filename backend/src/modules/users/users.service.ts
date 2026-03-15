@@ -2,27 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { UserEntity, UserRole } from '../../entities/user.entity';
-
-export interface CreateUserDto {
-  email: string;
-  displayName?: string;
-  password: string;
-  role?: UserRole;
-}
-
-export interface UpdateUserDto {
-  displayName?: string;
-  password?: string;
-  role?: UserRole;
-  isActive?: boolean;
-}
-
-export interface UserListQuery {
-  page?: number;
-  limit?: number;
-  search?: string;
-}
+import { UserEntity } from '../../entities/user.entity';
+import { CreateUserDto, UpdateUserDto, UserListQueryDto, UserRole } from './dto/user.dto';
 
 @Injectable()
 export class UsersService {
@@ -43,7 +24,7 @@ export class UsersService {
     return this.userRepository.findOne({ where: { email } });
   }
 
-  async findAll(tenantId: string, query: UserListQuery) {
+  async findAll(tenantId: string, query: UserListQueryDto) {
     const page = query.page ?? 1;
     const limit = Math.min(query.limit ?? 20, 100);
 

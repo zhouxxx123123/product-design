@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEnum, IsArray, ValidateNested } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsArray, ValidateNested, IsInt, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
 
@@ -35,6 +35,17 @@ export class CreateTemplateDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiPropertyOptional({ example: 'sales', description: '模板分类' })
+  @IsOptional()
+  @IsString()
+  category?: string;
+
+  @ApiPropertyOptional({ example: 60, description: '计划访谈时长（分钟）' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  duration?: number;
 
   @ApiProperty({ example: { sections: [] }, description: 'Template content structure' })
   @IsOptional()

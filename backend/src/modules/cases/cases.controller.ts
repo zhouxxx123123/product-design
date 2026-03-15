@@ -45,6 +45,23 @@ export class CasesController {
     });
   }
 
+  @Get('similar')
+  async findSimilar(
+    @Req() req: RequestWithUser,
+    @Query('text') text: string,
+    @Query('limit') limit?: string,
+  ) {
+    if (!text?.trim()) {
+      return { data: [], total: 0 };
+    }
+    const results = await this.casesService.similarSearch(
+      req.user.tenantId,
+      text.trim(),
+      limit ? Math.min(parseInt(limit, 10), 20) : 10,
+    );
+    return { data: results, total: results.length };
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string, @Req() req: RequestWithUser) {
     return this.casesService.findById(id, req.user.tenantId);

@@ -23,6 +23,40 @@ export enum TemplateScope {
   PERSONAL = 'personal',
 }
 
+export interface QuestionOption {
+  label: string;
+  value: string | number;
+  [key: string]: unknown;
+}
+
+export interface Question {
+  content: string;
+  type: string;
+  options?: QuestionOption[];
+  hint?: string;
+  isRequired?: boolean;
+}
+
+export interface Department {
+  name: string;
+  code?: string;
+  description?: string;
+  questions?: Question[];
+}
+
+export interface TemplateContent {
+  departments?: Department[];
+  settings?: Record<string, unknown>;
+  styles?: Record<string, unknown>;
+}
+
+export interface TemplateVariable {
+  type: string;
+  required: boolean;
+  default?: unknown;
+  description?: string;
+}
+
 /**
  * 模板实体
  * 访谈模板、问卷模板、报告模板等
@@ -31,6 +65,7 @@ export enum TemplateScope {
 @Index(['tenantId', 'templateType'])
 @Index(['scope'])
 @Index(['isActive'])
+@Index(['category'])
 export class TemplateEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -55,26 +90,17 @@ export class TemplateEntity {
   })
   templateType: TemplateType;
 
+  @Column({ name: 'category', type: 'varchar', length: 100, nullable: true })
+  category: string | null;
+
+  @Column({ type: 'integer', nullable: true })
+  duration: number | null;
+
   @Column({ type: 'text', nullable: true })
   description: string | null;
 
   @Column({ type: 'jsonb' })
-  content: {
-    departments?: Array<{
-      name: string;
-      code?: string;
-      description?: string;
-      questions?: Array<{
-        content: string;
-        type: string;
-        options?: any[];
-        hint?: string;
-        isRequired?: boolean;
-      }>;
-    }>;
-    settings?: Record<string, any>;
-    styles?: Record<string, any>;
-  };
+  content: TemplateContent;
 
   @Column({
     type: 'enum',
@@ -87,15 +113,7 @@ export class TemplateEntity {
   tags: string[];
 
   @Column({ type: 'jsonb', default: {} })
-  variables: Record<
-    string,
-    {
-      type: string;
-      required: boolean;
-      default?: any;
-      description?: string;
-    }
-  >;
+  variables: Record<string, TemplateVariable>;
 
   @Column({ type: 'integer', name: 'usage_count', default: 0 })
   usageCount: number;
@@ -107,7 +125,7 @@ export class TemplateEntity {
   isDefault: boolean;
 
   @Column({ type: 'jsonb', default: {} })
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt: Date;

@@ -10,7 +10,8 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { UsersService, CreateUserDto, UpdateUserDto } from './users.service';
+import { UsersService } from './users.service';
+import { CreateUserDto, UpdateUserDto, UserListQueryDto } from './dto/user.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -34,15 +35,9 @@ export class UsersController {
   @Roles('ADMIN', 'EXPERT')
   findAll(
     @Req() req: RequestWithUser,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-    @Query('search') search?: string,
+    @Query() query: UserListQueryDto,
   ) {
-    return this.usersService.findAll(req.user.tenantId, {
-      page: page ? parseInt(page, 10) || 1 : undefined,
-      limit: limit ? parseInt(limit, 10) || 20 : undefined,
-      search,
-    });
+    return this.usersService.findAll(req.user.tenantId, query);
   }
 
   @Post()

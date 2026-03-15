@@ -78,6 +78,40 @@ SELECT enable_tenant_rls('interview_questions');
 -- 配置表
 SELECT enable_tenant_rls('templates');
 
+-- AI记忆表
+SELECT enable_tenant_rls('copilot_memories');
+
+-- 转录片段表
+SELECT enable_tenant_rls('transcript_segments');
+
+-- 租户功能特性表 (tenant_features 主键为 (tenant_id, key)，直接使用 tenant_id 列)
+ALTER TABLE tenant_features ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tenant_features FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_features_isolation_policy ON tenant_features
+  FOR ALL
+  TO application_user
+  USING (
+    tenant_id = current_tenant_id()
+    OR is_super_tenant()
+  )
+  WITH CHECK (
+    tenant_id = current_tenant_id()
+    OR is_super_tenant()
+  );
+
+-- 字典节点表
+SELECT enable_tenant_rls('dictionary_nodes');
+
+-- 会话评论表
+SELECT enable_tenant_rls('session_comments');
+
+-- 会话案例关联表
+SELECT enable_tenant_rls('session_case_links');
+
+-- 会话洞察表
+SELECT enable_tenant_rls('session_insights');
+
 -- 5. audit_logs表的特殊策略
 -- 审计日志允许插入但限制查询
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;

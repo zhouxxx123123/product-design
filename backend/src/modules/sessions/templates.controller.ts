@@ -10,7 +10,9 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { TemplatesService, CreateTemplateDto, UpdateTemplateDto } from './templates.service';
+import { TemplatesService } from './templates.service';
+import { CreateTemplateDto } from './dto/create-template.dto';
+import { UpdateTemplateDto } from './dto/update-template.dto';
 import { TemplateType } from '../../entities/template.entity';
 import { DefaultSection } from './types/default-template.types';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';

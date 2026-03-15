@@ -28,9 +28,9 @@ export enum TranscriptionEngine {
  * ASR语音识别结果存储
  */
 @Entity('transcriptions')
-@Index(['session_id'])
+@Index(['sessionId'])
 @Index(['status'])
-@Index(['session_id', 'status'])
+@Index(['sessionId', 'status'])
 export class TranscriptionEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;

@@ -25,6 +25,7 @@ export interface AuthResponse {
     email: string;
     role: UserRole;
     tenantId: string | null;
+    isActive: boolean;
   };
 }
 
@@ -82,6 +83,7 @@ export class AuthService {
         email: user.email,
         role: user.role,
         tenantId: user.tenantId,
+        isActive: user.isActive,
       },
     };
   }
@@ -155,6 +157,7 @@ export class AuthService {
         email: user.email,
         role: user.role,
         tenantId: user.tenantId,
+        isActive: user.isActive,
       },
     };
   }
@@ -314,6 +317,7 @@ export class AuthService {
         email: user.email,
         role: user.role,
         tenantId: user.tenantId,
+        isActive: user.isActive,
       },
     };
   }

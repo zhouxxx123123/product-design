@@ -28,7 +28,7 @@ export enum RecordingSource {
  * 录音实体
  */
 @Entity('recordings')
-@Index(['session_id', 'created_at'])
+@Index(['sessionId', 'createdAt'])
 @Index(['status'])
 export class RecordingEntity {
   @PrimaryGeneratedColumn('uuid')

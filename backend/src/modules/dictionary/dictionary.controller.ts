@@ -11,11 +11,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
-import {
-  DictionaryService,
-  CreateDictionaryNodeDto,
-  UpdateDictionaryNodeDto,
-} from './dictionary.service';
+import { DictionaryService } from './dictionary.service';
+import { CreateDictionaryNodeDto, UpdateDictionaryNodeDto } from './dto/dictionary.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';

@@ -12,8 +12,8 @@ import {
 
 export enum UserRole {
   ADMIN = 'admin',
-  CONSULTANT = 'consultant',
-  VIEWER = 'viewer',
+  SALES = 'sales',
+  EXPERT = 'expert',
 }
 
 /**
@@ -21,8 +21,9 @@ export enum UserRole {
  */
 @Entity('users')
 @Index(['email'], { unique: true })
-@Index(['tenant_id'])
-@Index(['deleted_at'], { where: 'deleted_at IS NULL' })
+@Index(['tenantId'])
+@Index(['wechatOpenId'], { unique: true, where: '"wechat_open_id" IS NOT NULL' })
+@Index(['deletedAt'], { where: '"deleted_at" IS NULL' })
 export class UserEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -33,10 +34,14 @@ export class UserEntity {
   @Column({ type: 'varchar', length: 100, nullable: true, name: 'display_name' })
   displayName: string | null;
 
+  @Column({ type: 'varchar', length: 255, nullable: true, select: false })
+  password: string | null;
+
   @Column({
     type: 'enum',
     enum: UserRole,
-    default: UserRole.CONSULTANT,
+    enumName: 'user_role_enum',
+    default: UserRole.SALES,
   })
   role: UserRole;
 
@@ -45,6 +50,30 @@ export class UserEntity {
 
   @Column({ type: 'uuid', name: 'tenant_id', nullable: true })
   tenantId: string | null;
+
+  @Column({ type: 'text', nullable: true, name: 'refresh_token', select: false })
+  refreshToken: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true, name: 'wechat_open_id' })
+  wechatOpenId: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true, name: 'wechat_union_id' })
+  wechatUnionId: string | null;
+
+  @Column({ type: 'boolean', default: false, name: 'email_verified' })
+  emailVerified: boolean;
+
+  @Column({
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+    name: 'email_verification_token',
+    select: false,
+  })
+  emailVerificationToken: string | null;
+
+  @Column({ type: 'boolean', default: true, name: 'is_active' })
+  isActive: boolean;
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt: Date;

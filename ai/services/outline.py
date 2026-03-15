@@ -6,6 +6,7 @@ import structlog
 from typing import List, Dict, Optional
 
 from services.llm import llm_service
+from utils.json_parser import _parse_json_safe
 
 logger = structlog.get_logger(__name__)
 
@@ -25,6 +26,11 @@ class OutlineService:
 - 问题之间要有逻辑递进关系
 - 考虑受访者的背景和可能回答
 - 预估每个部分的访谈时长"""
+
+    OPTIMIZE_SYSTEM_PROMPT = (
+        "你是一位专业的用户研究专家，根据反馈意见对访谈提纲进行优化和改进。"
+        "保持原有结构，根据反馈调整问题措辞、增删问题或重新排序，以JSON格式返回优化后的完整提纲。"
+    )
 
     async def generate(
         self,
@@ -58,10 +64,15 @@ class OutlineService:
         try:
             response = await llm_service.chat(messages, temperature=0.7)
             content = response["choices"][0]["message"]["content"]
-            # TODO: 解析JSON响应
+            parsed = _parse_json_safe(content)
+            if isinstance(parsed, dict):
+                return parsed
+            # Graceful fallback: LLM returned non-JSON text
             return {
-                "status": "success",
-                "content": content,
+                "title": topic,
+                "sections": [],
+                "estimated_duration": "",
+                "raw_content": parsed,
             }
         except Exception as e:
             logger.error("提纲生成失败", error=str(e))
@@ -72,8 +83,36 @@ class OutlineService:
         根据反馈优化提纲
         """
         logger.info("开始优化提纲", feedback=feedback[:100])
-        # TODO: 实现提纲优化逻辑
-        return {"status": "success", "outline": outline}
+
+        import json as _json
+        outline_json = _json.dumps(outline, ensure_ascii=False, indent=2)
+
+        prompt = (
+            f"请根据以下反馈意见优化访谈提纲：\n\n"
+            f"反馈意见：{feedback}\n\n"
+            f"当前提纲：\n{outline_json}\n\n"
+            "请保持JSON格式返回优化后的完整提纲，字段与原提纲保持一致。"
+        )
+
+        messages = [
+            {"role": "system", "content": self.OPTIMIZE_SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ]
+
+        try:
+            response = await llm_service.chat(messages, temperature=0.5)
+            content = response["choices"][0]["message"]["content"]
+        except Exception as e:
+            logger.error("提纲优化失败", error=str(e))
+            raise
+
+        parsed = _parse_json_safe(content)
+        if isinstance(parsed, dict):
+            return parsed
+        # Fallback: LLM output unparsable — return a shallow copy of the original outline
+        # (copy avoids returning the same mutable reference, preventing silent mutation of caller's data)
+        logger.warning("提纲优化：无法解析LLM输出，返回原始提纲副本")
+        return dict(outline)
 
 
 # 服务单例

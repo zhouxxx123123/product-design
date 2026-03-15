@@ -15,6 +15,8 @@ from fastapi.middleware.gzip import GZipMiddleware
 from core.config import settings
 from core.logging import configure_logging
 from api.v1.router import api_router
+from services.llm import close_llm_client
+from services.embedding import close_embedding_client
 
 
 @asynccontextmanager
@@ -23,9 +25,13 @@ async def lifespan(app: FastAPI):
     # Startup
     configure_logging()
     logger = structlog.get_logger()
+    if not settings.MOONSHOT_API_KEY:
+        logger.error("MOONSHOT_API_KEY 未配置，LLM 功能将不可用")
     logger.info("Starting AI Service", version=settings.APP_VERSION)
     yield
     # Shutdown
+    await close_llm_client()
+    await close_embedding_client()
     logger.info("Shutting down AI Service")
 
 

@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
-import { CaseEntity } from '../entities/case.entity';
-import { buildVectorString, cosineSimilarityFromDistance } from '../../database/vector-column-type';
+import { CaseEntity } from '../../../entities/case.entity';
+import {
+  buildVectorString,
+  cosineSimilarityFromDistance,
+} from '../../../database/vector-column-type';
 
 /**
  * 案例Repository
@@ -35,7 +38,7 @@ export class CaseRepository extends Repository<CaseEntity> {
     tenantId: string,
     queryVector: number[],
     limit: number = 10,
-    minSimilarity: number = 0.8
+    minSimilarity: number = 0.8,
   ): Promise<Array<CaseEntity & { similarity: number }>> {
     const vectorStr = buildVectorString(queryVector);
 
@@ -67,21 +70,23 @@ export class CaseRepository extends Repository<CaseEntity> {
       ORDER BY embedding <=> $1::vector
       LIMIT $4
       `,
-      [vectorStr, tenantId, minSimilarity, limit]
+      [vectorStr, tenantId, minSimilarity, limit],
     );
 
-    return results.map(row => ({
-      ...this.manager.create(CaseEntity, {
-        ...row,
-        caseType: row.case_type,
-        isPublic: row.is_public,
-        createdBy: row.created_by,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        deletedAt: row.deleted_at,
-      }),
-      similarity: parseFloat(row.similarity),
-    }));
+    return (results as Record<string, unknown>[]).map((row) => {
+      const entity = this.manager.create(CaseEntity);
+      Object.assign(entity, row, {
+        caseType: row['case_type'],
+        isPublic: row['is_public'],
+        createdBy: row['created_by'],
+        createdAt: row['created_at'],
+        updatedAt: row['updated_at'],
+        deletedAt: row['deleted_at'],
+      });
+      return { ...entity, similarity: parseFloat(row['similarity'] as string) } as CaseEntity & {
+        similarity: number;
+      };
+    });
   }
 
   /**
@@ -115,7 +120,7 @@ export class CaseRepository extends Repository<CaseEntity> {
     tenantId: string,
     queryVector: number[],
     probes: number = 10,
-    limit: number = 10
+    limit: number = 10,
   ): Promise<Array<CaseEntity & { distance: number; similarity: number }>> {
     const vectorStr = buildVectorString(queryVector);
 
@@ -136,24 +141,25 @@ export class CaseRepository extends Repository<CaseEntity> {
         ORDER BY embedding <=> $1::vector
         LIMIT $3
         `,
-        [vectorStr, tenantId, limit]
+        [vectorStr, tenantId, limit],
       );
 
-      return results.map(row => {
-        const distance = parseFloat(row.distance);
+      return (results as Record<string, unknown>[]).map((row) => {
+        const distance = parseFloat(row['distance'] as string);
+        const entity = this.manager.create(CaseEntity);
+        Object.assign(entity, row, {
+          caseType: row['case_type'],
+          isPublic: row['is_public'],
+          createdBy: row['created_by'],
+          createdAt: row['created_at'],
+          updatedAt: row['updated_at'],
+          deletedAt: row['deleted_at'],
+        });
         return {
-          ...this.manager.create(CaseEntity, {
-            ...row,
-            caseType: row.case_type,
-            isPublic: row.is_public,
-            createdBy: row.created_by,
-            createdAt: row.created_at,
-            updatedAt: row.updated_at,
-            deletedAt: row.deleted_at,
-          }),
+          ...entity,
           distance,
           similarity: cosineSimilarityFromDistance(distance),
-        };
+        } as CaseEntity & { distance: number; similarity: number };
       });
     } finally {
       // 重置probes为默认值
@@ -168,16 +174,13 @@ export class CaseRepository extends Repository<CaseEntity> {
    * @param caseId 案例ID
    * @param embedding 向量数组 (1536维)
    */
-  async updateEmbedding(
-    caseId: string,
-    embedding: number[]
-  ): Promise<void> {
+  async updateEmbedding(caseId: string, embedding: number[]): Promise<void> {
     const vectorStr = buildVectorString(embedding);
 
-    await this.dataSource.query(
-      'UPDATE cases SET embedding = $1::vector WHERE id = $2',
-      [vectorStr, caseId]
-    );
+    await this.dataSource.query('UPDATE cases SET embedding = $1::vector WHERE id = $2', [
+      vectorStr,
+      caseId,
+    ]);
   }
 
   /**
@@ -186,18 +189,13 @@ export class CaseRepository extends Repository<CaseEntity> {
    * @param updates 案例ID和向量的映射
    */
   async batchUpdateEmbeddings(
-    updates: Array<{ caseId: string; embedding: number[] }>
+    updates: Array<{ caseId: string; embedding: number[] }>,
   ): Promise<void> {
     if (updates.length === 0) return;
 
-    const values = updates
-      .map((u, i) => `($${i * 2 + 1}::uuid, $${i * 2 + 2}::vector)`)
-      .join(', ');
+    const values = updates.map((u, i) => `($${i * 2 + 1}::uuid, $${i * 2 + 2}::vector)`).join(', ');
 
-    const params = updates.flatMap(u => [
-      u.caseId,
-      buildVectorString(u.embedding),
-    ]);
+    const params = updates.flatMap((u) => [u.caseId, buildVectorString(u.embedding)]);
 
     await this.dataSource.query(
       `
@@ -208,7 +206,7 @@ export class CaseRepository extends Repository<CaseEntity> {
       ) AS data(id, embedding)
       WHERE cases.id = data.id
       `,
-      params
+      params,
     );
   }
 
@@ -219,10 +217,7 @@ export class CaseRepository extends Repository<CaseEntity> {
    * @param tenantId 租户ID (可选)
    * @param limit 数量限制
    */
-  async findCasesWithoutEmbedding(
-    tenantId?: string,
-    limit: number = 100
-  ): Promise<CaseEntity[]> {
+  async findCasesWithoutEmbedding(tenantId?: string, limit: number = 100): Promise<CaseEntity[]> {
     const qb = this.createQueryBuilder('case')
       .where('case.embedding IS NULL')
       .andWhere('case.deletedAt IS NULL')

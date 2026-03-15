@@ -92,7 +92,7 @@ describe('CaseRepository', () => {
 
       expect(mockDataSource.query).toHaveBeenCalledWith(
         expect.stringContaining('1 - (embedding <=> $1::vector) AS similarity'),
-        [VECTOR_STRING, TENANT_ID, 0.7, 5]
+        [VECTOR_STRING, TENANT_ID, 0.7, 5],
       );
     });
 
@@ -102,10 +102,12 @@ describe('CaseRepository', () => {
 
       await repository.searchSimilar(TENANT_ID, TEST_VECTOR);
 
-      expect(mockDataSource.query).toHaveBeenCalledWith(
-        expect.any(String),
-        [VECTOR_STRING, TENANT_ID, 0.8, 10]
-      );
+      expect(mockDataSource.query).toHaveBeenCalledWith(expect.any(String), [
+        VECTOR_STRING,
+        TENANT_ID,
+        0.8,
+        10,
+      ]);
     });
 
     it('maps snake_case DB columns to camelCase entity fields', async () => {
@@ -175,7 +177,7 @@ describe('CaseRepository', () => {
       expect(mockDataSource.query).toHaveBeenCalledWith('SET LOCAL ivfflat.probes = 25');
       expect(mockDataSource.query).toHaveBeenCalledWith(
         expect.stringContaining('embedding <=> $1::vector AS distance'),
-        [VECTOR_STRING, TENANT_ID, 8]
+        [VECTOR_STRING, TENANT_ID, 8],
       );
     });
 
@@ -186,7 +188,7 @@ describe('CaseRepository', () => {
         .mockResolvedValueOnce(undefined); // SET probes=1 in finally
 
       await expect(
-        repository.searchSimilarApproximate(TENANT_ID, TEST_VECTOR, 15, 5)
+        repository.searchSimilarApproximate(TENANT_ID, TEST_VECTOR, 15, 5),
       ).rejects.toThrow('Query failed');
 
       expect(mockDataSource.query).toHaveBeenCalledWith('SET LOCAL ivfflat.probes = 15');
@@ -215,10 +217,11 @@ describe('CaseRepository', () => {
       await repository.searchSimilarApproximate(TENANT_ID, TEST_VECTOR);
 
       expect(mockDataSource.query).toHaveBeenCalledWith('SET LOCAL ivfflat.probes = 10');
-      expect(mockDataSource.query).toHaveBeenCalledWith(
-        expect.any(String),
-        [VECTOR_STRING, TENANT_ID, 10]
-      );
+      expect(mockDataSource.query).toHaveBeenCalledWith(expect.any(String), [
+        VECTOR_STRING,
+        TENANT_ID,
+        10,
+      ]);
     });
 
     it('maps snake_case fields to camelCase', async () => {
@@ -255,7 +258,7 @@ describe('CaseRepository', () => {
 
       expect(mockDataSource.query).toHaveBeenCalledWith(
         'UPDATE cases SET embedding = $1::vector WHERE id = $2',
-        [VECTOR_STRING, CASE_ID]
+        [VECTOR_STRING, CASE_ID],
       );
     });
 
@@ -265,10 +268,10 @@ describe('CaseRepository', () => {
 
       await repository.updateEmbedding(CASE_ID, longVector);
 
-      expect(mockDataSource.query).toHaveBeenCalledWith(
-        expect.any(String),
-        ['[0.1,0.2,0.3,0.4,0.5]', CASE_ID]
-      );
+      expect(mockDataSource.query).toHaveBeenCalledWith(expect.any(String), [
+        '[0.1,0.2,0.3,0.4,0.5]',
+        CASE_ID,
+      ]);
     });
   });
 
@@ -292,7 +295,7 @@ describe('CaseRepository', () => {
 
       expect(mockDataSource.query).toHaveBeenCalledWith(
         expect.stringContaining('VALUES ($1::uuid, $2::vector), ($3::uuid, $4::vector)'),
-        ['case-1', '[0.1,0.2]', 'case-2', '[0.3,0.4]']
+        ['case-1', '[0.1,0.2]', 'case-2', '[0.3,0.4]'],
       );
     });
 
@@ -306,10 +309,14 @@ describe('CaseRepository', () => {
 
       await repository.batchUpdateEmbeddings(updates);
 
-      expect(mockDataSource.query).toHaveBeenCalledWith(
-        expect.any(String),
-        ['alpha', '[1]', 'beta', '[2]', 'gamma', '[3]']
-      );
+      expect(mockDataSource.query).toHaveBeenCalledWith(expect.any(String), [
+        'alpha',
+        '[1]',
+        'beta',
+        '[2]',
+        'gamma',
+        '[3]',
+      ]);
     });
 
     it('builds correct VALUES clause for single update', async () => {
@@ -320,7 +327,7 @@ describe('CaseRepository', () => {
 
       expect(mockDataSource.query).toHaveBeenCalledWith(
         expect.stringContaining('VALUES ($1::uuid, $2::vector)'),
-        ['single', '[0.9,0.8]']
+        ['single', '[0.9,0.8]'],
       );
     });
   });
@@ -362,7 +369,7 @@ describe('CaseRepository', () => {
       await repository.findCasesWithoutEmbedding(undefined);
 
       const tenantCalls = (mockQb.andWhere as jest.Mock).mock.calls.filter((call) =>
-        call[0].includes('tenantId')
+        call[0].includes('tenantId'),
       );
       expect(tenantCalls).toHaveLength(0);
     });

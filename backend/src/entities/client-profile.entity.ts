@@ -14,8 +14,8 @@ import {
  * 客户档案实体
  */
 @Entity('client_profiles')
-@Index(['tenant_id', 'email'])
-@Index(['tenant_id', 'company'])
+@Index(['tenantId', 'email'])
+@Index(['tenantId', 'company'])
 export class ClientProfileEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -40,6 +40,12 @@ export class ClientProfileEntity {
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   industry: string | null;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  size: string | null;
+
+  @Column({ type: 'varchar', length: 20, default: 'potential' })
+  status: string;
 
   @Column({ type: 'jsonb', nullable: true })
   tags: string[] | null;

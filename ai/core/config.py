@@ -12,7 +12,8 @@ class Settings(BaseSettings):
     """应用配置"""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        # 加载顺序：根目录变量 → 服务本地覆盖（后者优先）
+        env_file=("../.env", ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -28,7 +29,14 @@ class Settings(BaseSettings):
     PORT: int = 8000
 
     # CORS配置
-    CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3002",
+        "http://localhost:4000",
+        "http://backend:4000",  # Docker network alias
+    ]
 
     # 数据库配置
     DATABASE_URL: str = "postgresql://postgres:password@localhost:5432/liuguang"
@@ -45,6 +53,16 @@ class Settings(BaseSettings):
     MINIO_BUCKET_NAME: str = "liuguang"
     MINIO_SECURE: bool = False
 
+    # ASR 提供商选择：whisper | tencent | mock
+    ASR_PROVIDER: str = "whisper"
+
+    # ASR 模式选择：mock | real | auto
+    ASR_MODE: str = "auto"
+
+    # faster-whisper 本地模型配置
+    WHISPER_MODEL_SIZE: str = "small"        # tiny | base | small | medium | large
+    WHISPER_MODEL_DIR: str = "/opt/models/whisper"
+
     # 腾讯ASR配置
     TENCENT_SECRET_ID: str = ""
     TENCENT_SECRET_KEY: str = ""
@@ -54,6 +72,9 @@ class Settings(BaseSettings):
     MOONSHOT_API_KEY: str = ""
     MOONSHOT_BASE_URL: str = "https://api.moonshot.cn/v1"
     MOONSHOT_MODEL: str = "kimi-k2.5"
+
+    # JWT配置（与 NestJS 后端共享同一密钥）
+    JWT_SECRET: str = ""
 
     # Celery配置
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"

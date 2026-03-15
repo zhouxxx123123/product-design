@@ -74,7 +74,7 @@ class Settings(BaseSettings):
     MOONSHOT_MODEL: str = "kimi-k2.5"
 
     # JWT配置（与 NestJS 后端共享同一密钥）
-    JWT_SECRET: str = ""
+    JWT_SECRET: str = ""  # REQUIRED in production — must match NestJS JWT_SECRET
 
     # Celery配置
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"

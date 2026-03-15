@@ -75,6 +75,10 @@ const CustomerDetailView: React.FC<CustomerDetailProps> = ({ customerId, onBack,
   const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
   const [isCalling, setIsCalling] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
+  const [emailSent, setEmailSent] = useState(false);
+  const [showExpandedContacts, setShowExpandedContacts] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoOn, setIsVideoOn] = useState(true);
 
   const addToast = useToastStore(s => s.addToast);
 
@@ -87,7 +91,7 @@ const CustomerDetailView: React.FC<CustomerDetailProps> = ({ customerId, onBack,
       industry: string;
       size: string;
       contactName: string;
-      contactTitle: string;
+      contactPosition: string;
       contactEmail: string;
       contactPhone: string;
     }) => {
@@ -95,7 +99,7 @@ const CustomerDetailView: React.FC<CustomerDetailProps> = ({ customerId, onBack,
       if (formData.contactName || formData.contactEmail || formData.contactPhone) {
         contacts.push({
           name: formData.contactName,
-          title: formData.contactTitle,
+          position: formData.contactPosition,
           email: formData.contactEmail,
           phone: formData.contactPhone,
         });
@@ -128,7 +132,7 @@ const CustomerDetailView: React.FC<CustomerDetailProps> = ({ customerId, onBack,
       industry: formData.get('industry') as string,
       size: formData.get('size') as string,
       contactName: formData.get('contactName') as string,
-      contactTitle: formData.get('contactTitle') as string,
+      contactPosition: formData.get('contactPosition') as string,
       contactEmail: formData.get('contactEmail') as string,
       contactPhone: formData.get('contactPhone') as string,
     };
@@ -497,7 +501,7 @@ const CustomerDetailView: React.FC<CustomerDetailProps> = ({ customerId, onBack,
                     </div>
                     <div>
                       <div className="font-bold text-slate-900 text-lg">{primaryContact.name}</div>
-                      <div className="text-xs text-slate-500">{primaryContact.title ?? ''}</div>
+                      <div className="text-xs text-slate-500">{primaryContact.position ?? ''}</div>
                     </div>
                   </div>
 
@@ -531,9 +535,57 @@ const CustomerDetailView: React.FC<CustomerDetailProps> = ({ customerId, onBack,
                   </div>
 
                   {(client?.contacts?.length ?? 0) > 1 && (
-                    <button className="w-full py-3 border border-slate-200 rounded-2xl text-xs font-bold text-slate-500 hover:bg-slate-50 transition-all">
-                      查看所有 {client?.contacts?.length} 个联系人
+                    <button
+                      onClick={() => setShowExpandedContacts(!showExpandedContacts)}
+                      className="w-full py-3 border border-slate-200 rounded-2xl text-xs font-bold text-slate-500 hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
+                    >
+                      <span>查看所有 {client?.contacts?.length} 个联系人</span>
+                      <ChevronRight className={`w-4 h-4 transition-transform ${showExpandedContacts ? 'rotate-90' : ''}`} />
                     </button>
+                  )}
+
+                  {/* Expanded Contacts List */}
+                  {showExpandedContacts && client?.contacts && client.contacts.length > 1 && (
+                    <div className="space-y-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                      <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider">全部联系人</h4>
+                      {client.contacts.map((contact, index) => (
+                        <div key={index} className="p-3 bg-white rounded-lg border border-slate-100">
+                          <div className="flex items-start gap-3 mb-2">
+                            <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-xs">
+                              {contact.name?.charAt(0)?.toUpperCase() ?? (index + 1)}
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-semibold text-sm text-slate-900">{contact.name ?? `联系人 ${index + 1}`}</div>
+                              <div className="text-xs text-slate-500">{contact.position ?? ''}</div>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            {contact.email && (
+                              <button
+                                onClick={() => setIsEmailModalOpen(true)}
+                                className="w-full flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-indigo-50 transition-all group text-left"
+                              >
+                                <Mail className="w-3 h-3 text-slate-400 group-hover:text-indigo-600" />
+                                <span className="text-xs text-slate-600 group-hover:text-indigo-600 truncate">{contact.email}</span>
+                              </button>
+                            )}
+                            {contact.phone && (
+                              <button
+                                onClick={() => {
+                                  setIsPhoneModalOpen(true);
+                                  setIsCalling(true);
+                                  setCallDuration(0);
+                                }}
+                                className="w-full flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-indigo-50 transition-all group text-left"
+                              >
+                                <Phone className="w-3 h-3 text-slate-400 group-hover:text-indigo-600" />
+                                <span className="text-xs text-slate-600 group-hover:text-indigo-600">{contact.phone}</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </>
               ) : (
@@ -703,8 +755,8 @@ const CustomerDetailView: React.FC<CustomerDetailProps> = ({ customerId, onBack,
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">职位</label>
                         <input
                           type="text"
-                          name="contactTitle"
-                          defaultValue={primaryContact?.title}
+                          name="contactPosition"
+                          defaultValue={primaryContact?.position}
                           className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
                         />
                       </div>
@@ -831,11 +883,27 @@ const CustomerDetailView: React.FC<CustomerDetailProps> = ({ customerId, onBack,
                   取消
                 </button>
                 <button
-                  onClick={() => setIsEmailModalOpen(false)}
-                  className="flex-[2] px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all flex items-center justify-center gap-2"
+                  onClick={() => {
+                    setEmailSent(true);
+                    setTimeout(() => {
+                      setIsEmailModalOpen(false);
+                      setEmailSent(false);
+                    }, 1500);
+                  }}
+                  disabled={emailSent}
+                  className="flex-[2] px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
                 >
-                  <Mail className="w-4 h-4" />
-                  立即发送
+                  {emailSent ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      ✓ 邮件已发送
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="w-4 h-4" />
+                      立即发送
+                    </>
+                  )}
                 </button>
               </div>
             </motion.div>
@@ -893,18 +961,37 @@ const CustomerDetailView: React.FC<CustomerDetailProps> = ({ customerId, onBack,
                 </div>
 
                 <div className="grid grid-cols-3 gap-6 mb-12">
-                  {[
-                    { icon: MessageSquare, label: '静音' },
-                    { icon: Users, label: '添加' },
-                    { icon: Globe, label: '视频' },
-                  ].map((btn) => (
-                    <button key={btn.label} className="flex flex-col items-center gap-2 group">
-                      <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center group-hover:bg-white/20 transition-all">
-                        <btn.icon className="w-5 h-5" />
-                      </div>
-                      <span className="text-[10px] text-white/50">{btn.label}</span>
-                    </button>
-                  ))}
+                  <button
+                    onClick={() => setIsMuted(!isMuted)}
+                    className="flex flex-col items-center gap-2 group"
+                  >
+                    <div className={`w-12 h-12 ${isMuted ? 'bg-red-500/20' : 'bg-white/10'} rounded-full flex items-center justify-center group-hover:bg-white/20 transition-all`}>
+                      <MessageSquare className={`w-5 h-5 ${isMuted ? 'text-red-400' : 'text-white'}`} />
+                    </div>
+                    <span className={`text-[10px] ${isMuted ? 'text-red-300' : 'text-white/50'}`}>
+                      {isMuted ? '已静音' : '静音'}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => addToast('功能开发中', 'info')}
+                    className="flex flex-col items-center gap-2 group"
+                  >
+                    <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center group-hover:bg-white/20 transition-all">
+                      <Users className="w-5 h-5" />
+                    </div>
+                    <span className="text-[10px] text-white/50">添加</span>
+                  </button>
+                  <button
+                    onClick={() => setIsVideoOn(!isVideoOn)}
+                    className="flex flex-col items-center gap-2 group"
+                  >
+                    <div className={`w-12 h-12 ${!isVideoOn ? 'bg-red-500/20' : 'bg-white/10'} rounded-full flex items-center justify-center group-hover:bg-white/20 transition-all`}>
+                      <Globe className={`w-5 h-5 ${!isVideoOn ? 'text-red-400' : 'text-white'}`} />
+                    </div>
+                    <span className={`text-[10px] ${!isVideoOn ? 'text-red-300' : 'text-white/50'}`}>
+                      {!isVideoOn ? '视频已关' : '视频'}
+                    </span>
+                  </button>
                 </div>
 
                 <button

@@ -47,6 +47,7 @@ class SentimentInfo(BaseModel):
 
 
 class InsightResponse(BaseModel):
+    status: str = "success"
     themes: List[dict] = []
     key_quotes: List[dict] = []
     sentiment: Optional[dict] = None

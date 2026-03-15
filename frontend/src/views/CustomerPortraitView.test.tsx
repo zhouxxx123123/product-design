@@ -53,7 +53,7 @@ const mockClient = {
   status: 'active',
   size: '100-500人',
   tags: ['重点客户'],
-  contacts: [{ name: '张三', email: 'zhang@test.com', phone: '13800000001', title: '总监' }],
+  contacts: [{ name: '张三', email: 'zhang@test.com', phone: '13800000001', position: '总监' }],
   website: 'https://test.com',
   address: '上海市',
   notes: '测试备注',

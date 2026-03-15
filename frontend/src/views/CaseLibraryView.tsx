@@ -15,11 +15,14 @@ import {
   List,
   MoreHorizontal,
   X,
-  Loader2
+  Loader2,
+  CheckCircle2
 } from 'lucide-react';
 
 const CaseLibraryView: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingCase, setEditingCase] = useState<any>(null);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -27,11 +30,19 @@ const CaseLibraryView: React.FC = () => {
   const [industryFilterCase, setIndustryFilterCase] = useState<string>('');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [showToast, setShowToast] = useState(false);
   const [newCase, setNewCase] = useState({
     title: '',
     industry: '',
     content: '',
     summary: '',
+  });
+  const [editForm, setEditForm] = useState({
+    title: '',
+    industry: '',
+    content: '',
+    summary: '',
+    tags: [] as string[],
   });
 
   const queryClient = useQueryClient();
@@ -69,6 +80,18 @@ const CaseLibraryView: React.FC = () => {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, dto }: { id: string; dto: any }) => casesApi.update(id, dto),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cases'] });
+      setIsEditModalOpen(false);
+      setEditingCase(null);
+    },
+    onError: () => {
+      alert('更新失败，请稍后重试');
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => casesApi.delete(id),
     onSuccess: () => {
@@ -90,6 +113,43 @@ const CaseLibraryView: React.FC = () => {
       return;
     }
     createMutation.mutate();
+  };
+
+  const handleEditCase = (caseItem: any) => {
+    setEditingCase(caseItem);
+    setEditForm({
+      title: caseItem.title,
+      industry: cases.find(c => c.id === caseItem.id)?.client || '',
+      content: caseItem.client,
+      summary: caseItem.client,
+      tags: caseItem.tags || [],
+    });
+    setIsEditModalOpen(true);
+    setOpenMenuId(null);
+  };
+
+  const handleUpdateCase = () => {
+    if (!editForm.title.trim()) {
+      alert('请输入案例标题');
+      return;
+    }
+    updateMutation.mutate({
+      id: editingCase.id,
+      dto: editForm,
+    });
+  };
+
+  const handleShareCase = async (caseItem: any) => {
+    try {
+      const shareUrl = `${window.location.origin}/cases/${caseItem.id}`;
+      await navigator.clipboard.writeText(shareUrl);
+      setShowToast(true);
+      setOpenMenuId(null);
+      setTimeout(() => setShowToast(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+      alert('复制失败，请稍后重试');
+    }
   };
 
   const cases = (casesData?.data ?? []).map(c => ({
@@ -265,9 +325,7 @@ const CaseLibraryView: React.FC = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setOpenMenuId(null);
-                                // TODO: open edit modal
-                                alert('编辑功能即将上线');
+                                handleEditCase(item);
                               }}
                               className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2"
                             >
@@ -276,9 +334,7 @@ const CaseLibraryView: React.FC = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setOpenMenuId(null);
-                                // TODO: implement share
-                                alert('分享功能即将上线');
+                                handleShareCase(item);
                               }}
                               className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2"
                             >
@@ -363,9 +419,7 @@ const CaseLibraryView: React.FC = () => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              setOpenMenuId(null);
-                              // TODO: open edit modal
-                              alert('编辑功能即将上线');
+                              handleEditCase(item);
                             }}
                             className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2"
                           >
@@ -374,9 +428,7 @@ const CaseLibraryView: React.FC = () => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              setOpenMenuId(null);
-                              // TODO: implement share
-                              alert('分享功能即将上线');
+                              handleShareCase(item);
                             }}
                             className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2"
                           >
@@ -531,6 +583,121 @@ const CaseLibraryView: React.FC = () => {
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Case Modal */}
+      <AnimatePresence>
+        {isEditModalOpen && editingCase && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsEditModalOpen(false)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="relative w-full max-w-lg bg-white rounded-[32px] shadow-2xl overflow-hidden"
+            >
+              <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                    <Folder className="w-6 h-6" />
+                  </div>
+                  <h2 className="text-xl font-bold text-slate-900">编辑案例</h2>
+                </div>
+                <button
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-8 space-y-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">案例标题 *</label>
+                  <input
+                    type="text"
+                    value={editForm.title}
+                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                    placeholder="输入案例标题"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">所属行业</label>
+                  <input
+                    type="text"
+                    value={editForm.industry}
+                    onChange={(e) => setEditForm({ ...editForm, industry: e.target.value })}
+                    placeholder="如：金融科技、人工智能"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">案例摘要</label>
+                  <textarea
+                    value={editForm.summary}
+                    onChange={(e) => setEditForm({ ...editForm, summary: e.target.value })}
+                    placeholder="简短摘要..."
+                    rows={2}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all resize-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">标签</label>
+                  <input
+                    type="text"
+                    value={editForm.tags.join(', ')}
+                    onChange={(e) => setEditForm({ ...editForm, tags: e.target.value.split(',').map(tag => tag.trim()).filter(Boolean) })}
+                    placeholder="用逗号分隔多个标签"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="p-8 border-t border-slate-100 bg-slate-50/50 flex gap-3">
+                <button
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="flex-1 px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-2xl font-bold hover:bg-slate-50 transition-all"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleUpdateCase}
+                  disabled={updateMutation.isPending}
+                  className="flex-[2] px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {updateMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Plus className="w-4 h-4" />
+                  )}
+                  {updateMutation.isPending ? '保存中...' : '保存修改'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {showToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.9 }}
+            className="fixed bottom-8 right-8 z-50 bg-emerald-600 text-white px-6 py-3 rounded-2xl shadow-lg flex items-center gap-3"
+          >
+            <CheckCircle2 className="w-5 h-5" />
+            链接已复制
+          </motion.div>
         )}
       </AnimatePresence>
     </motion.div>

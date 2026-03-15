@@ -1,6 +1,19 @@
-import { IsString, IsOptional, IsEmail, IsEnum, IsBoolean, MinLength, IsInt, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEmail,
+  IsEnum,
+  IsBoolean,
+  MinLength,
+  IsInt,
+  Min,
+  Max,
+  IsNotEmpty,
+  MaxLength,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
+import { UserEntity } from '../../../entities/user.entity';
 
 // 本地重新声明，避免 Swagger plugin 生成 entity 绝对路径
 export enum UserRole {
@@ -14,10 +27,11 @@ export class CreateUserDto {
   @IsEmail()
   email: string;
 
-  @ApiPropertyOptional({ example: '张三', description: '显示名称' })
-  @IsOptional()
+  @ApiProperty({ example: '张三', maxLength: 100, description: '显示名称（必填）' })
+  @IsNotEmpty({ message: '显示名称不能为空' })
   @IsString()
-  displayName?: string;
+  @MaxLength(100)
+  displayName: string;
 
   @ApiProperty({ example: 'P@ssword123', description: '密码（至少8位）' })
   @IsString()
@@ -73,4 +87,45 @@ export class UserListQueryDto {
   @IsOptional()
   @IsString()
   search?: string;
+}
+
+/**
+ * 用户响应DTO - 仅包含安全的公开字段
+ */
+export class UserResponseDto {
+  @ApiProperty({ example: 'uuid-12345', description: '用户ID' })
+  id: string;
+
+  @ApiProperty({ example: 'user@company.com', description: '用户邮箱' })
+  email: string;
+
+  @ApiProperty({ example: '张三', description: '显示名称', nullable: true })
+  displayName: string | null;
+
+  @ApiProperty({ enum: UserRole, example: UserRole.SALES, description: '角色' })
+  role: UserRole;
+
+  @ApiProperty({ example: 'uuid-67890', description: '租户ID', nullable: true })
+  tenantId: string | null;
+
+  @ApiProperty({ example: true, description: '是否激活' })
+  isActive: boolean;
+
+  @ApiProperty({ example: '2024-01-01T00:00:00Z', description: '创建时间' })
+  createdAt: Date;
+
+  /**
+   * 从 UserEntity 创建 UserResponseDto
+   */
+  static fromEntity(entity: UserEntity): UserResponseDto {
+    const dto = new UserResponseDto();
+    dto.id = entity.id;
+    dto.email = entity.email;
+    dto.displayName = entity.displayName ?? null;
+    dto.role = entity.role;
+    dto.tenantId = entity.tenantId ?? null;
+    dto.isActive = entity.isActive;
+    dto.createdAt = entity.createdAt;
+    return dto;
+  }
 }

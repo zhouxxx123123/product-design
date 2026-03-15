@@ -80,7 +80,7 @@ const mockClient = {
   size: '100-500人',
   status: 'active',
   tags: ['重点客户'],
-  contacts: [{ name: '张三', email: 'zhang@test.com', phone: '13800000001', title: '总监' }],
+  contacts: [{ name: '张三', email: 'zhang@test.com', phone: '13800000001', position: '总监' }],
   website: 'https://test.com',
   address: '上海市',
   notes: '测试备注',
@@ -271,7 +271,7 @@ describe('CustomerDetailView', () => {
         contacts: expect.arrayContaining([
           expect.objectContaining({
             name: '张三',
-            title: '总监',
+            position: '总监',
             email: 'zhang@test.com',
             phone: '13800000001',
           })

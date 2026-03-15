@@ -6,7 +6,6 @@ import { DefaultSection, DefaultQuestion } from './types/default-template.types'
 import { CreateTemplateDto } from './dto/create-template.dto';
 import { UpdateTemplateDto } from './dto/update-template.dto';
 
-
 export interface TemplateListQuery {
   page?: number;
   limit?: number;
@@ -59,7 +58,7 @@ export class TemplatesService {
       .getManyAndCount();
 
     return {
-      data: data.map(item => this.toResponse(item)),
+      data: data.map((item) => this.toResponse(item)),
       total,
       page,
       limit,
@@ -86,11 +85,7 @@ export class TemplatesService {
     return this.toResponse(item);
   }
 
-  async create(
-    tenantId: string,
-    createdBy: string,
-    dto: CreateTemplateDto,
-  ) {
+  async create(tenantId: string, createdBy: string, dto: CreateTemplateDto) {
     const item = this.repo.create({
       ...dto,
       name: dto.title, // 映射前端 title 到 entity name
@@ -128,17 +123,17 @@ export class TemplatesService {
     return { success: true };
   }
 
-  async duplicate(id: string, tenantId: string) {
+  async duplicate(id: string, tenantId: string, userId: string) {
     const source = await this.getEntityById(id, tenantId);
     const copy = this.repo.create({
-      tenantId: source.tenantId,
-      createdBy: source.createdBy,
+      tenantId: tenantId,  // always use caller's tenantId, never source.tenantId
+      createdBy: userId,   // use current user as creator
       name: `${source.name} 副本`,
       code: source.code ? `${source.code}_copy` : undefined,
       templateType: source.templateType,
       description: source.description,
       content: source.content,
-      scope: source.scope,
+      scope: TemplateScope.TENANT,  // copies are always tenant-scoped
       tags: [...source.tags],
       variables: { ...source.variables },
       metadata: { ...source.metadata },

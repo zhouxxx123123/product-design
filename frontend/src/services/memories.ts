@@ -17,6 +17,6 @@ export const memoriesApi = {
   list: (params?: { page?: number; limit?: number; search?: string; type?: MemoryType }) =>
     http.get<PaginatedResponse<Memory>>('/memories', { params }),
   deleteOne: (id: string) => http.delete<{ success: boolean }>(`/memories/${id}`),
-  deleteAll: () => http.delete<{ success: boolean }>('/memories'),
+  deleteAll: () => http.delete<{ success: boolean }>('/memories?confirm=true'),
   export: () => http.get<Memory[]>('/memories/export'),
 };

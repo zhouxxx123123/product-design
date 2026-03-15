@@ -95,6 +95,7 @@ const CopilotDialog: React.FC = () => {
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastInput, setLastInput] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
   const [messages, setMessages] = useState<CopilotMessage[]>([
     {
       id: 'welcome',
@@ -238,6 +239,18 @@ const CopilotDialog: React.FC = () => {
     },
     [],
   );
+
+  // ── Recording handler ──
+
+  const handleMicClick = () => {
+    if (isRecording) {
+      setIsRecording(false);
+    } else {
+      setIsRecording(true);
+      // Auto-stop after 30s as safety
+      setTimeout(() => setIsRecording(false), 30000);
+    }
+  };
 
   // ── Send handler ──
 
@@ -574,11 +587,19 @@ const CopilotDialog: React.FC = () => {
                       className="w-full pl-4 pr-12 py-3 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all"
                     />
                     <button
-                      disabled
-                      title="语音输入即将上线"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-slate-300 cursor-not-allowed"
+                      onClick={handleMicClick}
+                      title={isRecording ? "停止录音" : "开始录音"}
+                      className={cn(
+                        "absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-all",
+                        isRecording
+                          ? "text-red-500 bg-red-50 hover:bg-red-100"
+                          : "text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"
+                      )}
                     >
-                      <Mic className="w-4 h-4" />
+                      <Mic className={cn("w-4 h-4", isRecording && "animate-pulse")} />
+                      {isRecording && (
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                      )}
                     </button>
                   </div>
                   <button

@@ -1,10 +1,18 @@
-import { IsString, IsNotEmpty, IsOptional, IsDateString, IsInt, Min, IsUUID } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsDateString,
+  IsInt,
+  Min,
+  IsUUID,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateSessionDto {
   @ApiProperty({
     example: 'Product Research Interview',
-    description: 'Session title'
+    description: 'Session title',
   })
   @IsString()
   @IsNotEmpty()
@@ -13,33 +21,31 @@ export class CreateSessionDto {
   @ApiProperty({
     example: 'Deep dive into user needs for mobile app features',
     description: 'Optional session description',
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsString()
   description?: string;
 
-  @ApiProperty({
-    example: 'client-123',
-    description: 'Optional client ID',
-    required: false
+  @ApiPropertyOptional({
+    example: '550e8400-e29b-41d4-a716-446655440000',
+    description: '客户 ID（UUID）',
   })
   @IsOptional()
-  @IsString()
+  @IsUUID()
   clientId?: string;
 
-  @ApiProperty({
-    example: 'interviewer-456',
-    description: 'Optional interviewer ID',
-    required: false
+  @ApiPropertyOptional({
+    example: '550e8400-e29b-41d4-a716-446655440001',
+    description: '访谈者 ID（UUID）',
   })
   @IsOptional()
-  @IsString()
+  @IsUUID()
   interviewerId?: string;
 
   @ApiProperty({
     example: '2026-03-15T14:30:00Z',
-    description: 'Scheduled interview date and time'
+    description: 'Scheduled interview date and time',
   })
   @IsDateString()
   interviewDate: string | Date;
@@ -48,7 +54,7 @@ export class CreateSessionDto {
     example: 60,
     description: 'Planned duration in minutes',
     minimum: 1,
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsInt()
@@ -58,7 +64,7 @@ export class CreateSessionDto {
   @ApiPropertyOptional({
     example: 'zh-CN',
     description: 'Interview language code',
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsString()
@@ -67,7 +73,7 @@ export class CreateSessionDto {
   @ApiPropertyOptional({
     example: '550e8400-e29b-41d4-a716-446655440000',
     description: 'Template ID to use for this session',
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsUUID()

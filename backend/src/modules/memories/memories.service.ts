@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CopilotMemoryEntity, MemoryType } from '../../entities/copilot-memory.entity';
@@ -59,8 +59,11 @@ export class MemoriesService {
     };
   }
 
-  async deleteOne(id: string, userId: string): Promise<{ success: boolean }> {
-    await this.repo.delete({ id, userId });
+  async deleteOne(id: string, userId: string, tenantId: string): Promise<{ success: boolean }> {
+    const result = await this.repo.delete({ id, userId, tenantId });
+    if (result.affected === 0) {
+      throw new NotFoundException(`记忆 ${id} 不存在`);
+    }
     return { success: true };
   }
 

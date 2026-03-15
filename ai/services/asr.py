@@ -293,7 +293,7 @@ class TencentASRService:
             voice_format=voice_format,
         )
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             resp = await loop.run_in_executor(
                 None,
                 self._call_sentence_recognition,
@@ -331,7 +331,7 @@ class TencentASRService:
         """调用真实 API 识别远程 URL 音频。"""
         logger.info("ASR real: URL音频识别", url=audio_url)
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             resp = await loop.run_in_executor(
                 None,
                 self._call_sentence_recognition,

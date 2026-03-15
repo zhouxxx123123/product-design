@@ -53,7 +53,7 @@ const chatDto: ChatDto = {
 
 const insightDto: InsightProxyDto = {
   transcript: '面试转录文本内容',
-  interview_id: 'interview-001',
+  interviewId: 'interview-001',
 };
 
 const outlineDto: GenerateOutlineDto = {

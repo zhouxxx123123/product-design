@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional
 import httpx
 import structlog
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 
 from services.llm import llm_service
 
@@ -65,18 +65,16 @@ Notes:
 class ComponentGenerateRequest(BaseModel):
     """Request body for component generation."""
 
-    description: str
+    description: str = Field(..., min_length=1, description="组件描述")
     context: Optional[Dict[str, Any]] = None
 
 
 class ComponentGenerateResponse(BaseModel):
     """Response containing the generated component schema."""
 
-    schema_: Dict[str, Any]
+    model_config = ConfigDict(populate_by_name=True)
 
-    class Config:
-        # Expose the field as "schema" in JSON (avoiding clash with Pydantic's own .schema())
-        fields = {"schema_": "schema"}
+    schema_: Dict[str, Any] = Field(..., alias="schema")
 
 
 # ---------------------------------------------------------------------------

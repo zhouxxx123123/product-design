@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   Download,
@@ -72,11 +73,13 @@ interface CustomerPortraitProps {
 }
 
 const CustomerPortraitView: React.FC<CustomerPortraitProps> = ({ customerId, onBack, onViewChange: _onViewChange }) => {
+  const navigate = useNavigate();
   const [isGeneratingPortrait, setIsGeneratingPortrait] = useState(false);
   const [aiPortrait, setAiPortrait] = useState<AiPortrait | null>(null);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [activeAnalysisTab, setActiveAnalysisTab] = useState<'业务需求' | '技术架构' | '决策链条'>('业务需求');
 
   // Fetch real client data; fall back to mock when not yet loaded.
   const { data: client, isLoading: isLoadingClient } = useQuery({
@@ -389,50 +392,146 @@ const CustomerPortraitView: React.FC<CustomerPortraitProps> = ({ customerId, onB
             <div className="p-8 border-b border-slate-100 flex items-center justify-between">
               <h2 className="text-xl font-bold text-slate-900">深度需求分析</h2>
               <div className="flex gap-4">
-                <button className="text-sm font-bold text-indigo-600">业务需求</button>
-                <button className="text-sm font-bold text-slate-400">技术架构</button>
-                <button className="text-sm font-bold text-slate-400">决策链条</button>
+                {['业务需求', '技术架构', '决策链条'].map((tabLabel) => (
+                  <button
+                    key={tabLabel}
+                    onClick={() => setActiveAnalysisTab(tabLabel as typeof activeAnalysisTab)}
+                    className={cn(
+                      'text-sm font-bold transition-colors',
+                      activeAnalysisTab === tabLabel
+                        ? 'text-indigo-600'
+                        : 'text-slate-400 hover:text-slate-600'
+                    )}
+                  >
+                    {tabLabel}
+                  </button>
+                ))}
               </div>
             </div>
             <div className="p-10 grid grid-cols-2 gap-12">
-              <div className="space-y-6">
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
-                  <Target className="w-4 h-4 text-indigo-600" />
-                  关键需求点
-                </h3>
-                <div className="space-y-4">
-                  {portraitNeeds && portraitNeeds.length > 0
-                    ? portraitNeeds.map((need, i) => (
-                        <div key={i} className="flex items-start gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                          <div className="w-6 h-6 bg-white rounded-lg flex items-center justify-center shrink-0 shadow-sm">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                          </div>
-                          <span className="text-sm text-slate-700 font-medium">{need}</span>
+              {/* Business Requirements Tab Content (Default) */}
+              {activeAnalysisTab === '业务需求' && (
+                <>
+                  <div className="space-y-6">
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                      <Target className="w-4 h-4 text-indigo-600" />
+                      关键需求点
+                    </h3>
+                    <div className="space-y-4">
+                      {portraitNeeds && portraitNeeds.length > 0
+                        ? portraitNeeds.map((need, i) => (
+                            <div key={i} className="flex items-start gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                              <div className="w-6 h-6 bg-white rounded-lg flex items-center justify-center shrink-0 shadow-sm">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                              </div>
+                              <span className="text-sm text-slate-700 font-medium">{need}</span>
+                            </div>
+                          ))
+                        : <p className="text-slate-400 text-sm italic">暂无数据，请先生成画像</p>
+                      }
+                    </div>
+                  </div>
+                  <div className="space-y-6">
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-amber-500" />
+                      潜在风险与阻碍
+                    </h3>
+                    <div className="space-y-4">
+                      {portraitRisks && portraitRisks.length > 0
+                        ? portraitRisks.map((risk, i) => (
+                            <div key={i} className="flex items-start gap-4 p-4 bg-red-50/50 rounded-2xl border border-red-100">
+                              <div className="w-6 h-6 bg-white rounded-lg flex items-center justify-center shrink-0 shadow-sm">
+                                <AlertCircle className="w-4 h-4 text-red-500" />
+                              </div>
+                              <span className="text-sm text-slate-700 font-medium">{risk}</span>
+                            </div>
+                          ))
+                        : <p className="text-slate-400 text-sm italic">暂无数据，请先生成画像</p>
+                      }
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Technical Architecture Tab Content */}
+              {activeAnalysisTab === '技术架构' && (
+                <>
+                  <div className="space-y-6">
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                      <PieChart className="w-4 h-4 text-indigo-600" />
+                      技术栈分析
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div className="w-6 h-6 bg-white rounded-lg flex items-center justify-center shrink-0 shadow-sm">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                         </div>
-                      ))
-                    : <p className="text-slate-400 text-sm italic">暂无数据，请先生成画像</p>
-                  }
-                </div>
-              </div>
-              <div className="space-y-6">
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-amber-500" />
-                  潜在风险与阻碍
-                </h3>
-                <div className="space-y-4">
-                  {portraitRisks && portraitRisks.length > 0
-                    ? portraitRisks.map((risk, i) => (
-                        <div key={i} className="flex items-start gap-4 p-4 bg-red-50/50 rounded-2xl border border-red-100">
-                          <div className="w-6 h-6 bg-white rounded-lg flex items-center justify-center shrink-0 shadow-sm">
-                            <AlertCircle className="w-4 h-4 text-red-500" />
-                          </div>
-                          <span className="text-sm text-slate-700 font-medium">{risk}</span>
+                        <span className="text-sm text-slate-700 font-medium">基于云原生架构，采用微服务设计</span>
+                      </div>
+                      <div className="flex items-start gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div className="w-6 h-6 bg-white rounded-lg flex items-center justify-center shrink-0 shadow-sm">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                         </div>
-                      ))
-                    : <p className="text-slate-400 text-sm italic">暂无数据，请先生成画像</p>
-                  }
-                </div>
-              </div>
+                        <span className="text-sm text-slate-700 font-medium">使用 Kubernetes 进行容器编排</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-6">
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-amber-500" />
+                      技术挑战
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-4 p-4 bg-amber-50/50 rounded-2xl border border-amber-100">
+                        <div className="w-6 h-6 bg-white rounded-lg flex items-center justify-center shrink-0 shadow-sm">
+                          <AlertCircle className="w-4 h-4 text-amber-500" />
+                        </div>
+                        <span className="text-sm text-slate-700 font-medium">遗留系统集成复杂度较高</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Decision Chain Tab Content */}
+              {activeAnalysisTab === '决策链条' && (
+                <>
+                  <div className="space-y-6">
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                      <Briefcase className="w-4 h-4 text-indigo-600" />
+                      关键决策人
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div className="w-6 h-6 bg-white rounded-lg flex items-center justify-center shrink-0 shadow-sm">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        </div>
+                        <span className="text-sm text-slate-700 font-medium">CTO：技术架构最终审批人</span>
+                      </div>
+                      <div className="flex items-start gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div className="w-6 h-6 bg-white rounded-lg flex items-center justify-center shrink-0 shadow-sm">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        </div>
+                        <span className="text-sm text-slate-700 font-medium">CFO：预算审核关键角色</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-6">
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-amber-500" />
+                      影响因素
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-4 p-4 bg-blue-50/50 rounded-2xl border border-blue-100">
+                        <div className="w-6 h-6 bg-white rounded-lg flex items-center justify-center shrink-0 shadow-sm">
+                          <AlertCircle className="w-4 h-4 text-blue-500" />
+                        </div>
+                        <span className="text-sm text-slate-700 font-medium">季度业绩压力可能影响采购时机</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -490,7 +589,10 @@ const CustomerPortraitView: React.FC<CustomerPortraitProps> = ({ customerId, onB
                   <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.tag}</div>
                 </div>
               ))}
-              <button className="w-full py-3 border border-slate-200 rounded-2xl text-xs font-bold text-slate-500 hover:bg-slate-50 transition-all">
+              <button
+                onClick={() => navigate('/cases')}
+                className="w-full py-3 border border-slate-200 rounded-2xl text-xs font-bold text-slate-500 hover:bg-slate-50 transition-all"
+              >
                 查看案例库
               </button>
             </div>

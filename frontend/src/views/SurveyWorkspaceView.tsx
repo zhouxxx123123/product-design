@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { recognizeAudioFile } from '../services/asr';
 import { llmApi } from '../services/llm';
@@ -28,7 +28,8 @@ import {
   Plus,
   Upload,
   Paperclip,
-  Link
+  Link,
+  X
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -47,6 +48,8 @@ interface SurveyWorkspaceProps {
 const SurveyWorkspaceView: React.FC<SurveyWorkspaceProps> = ({ onBack, onViewChange: _onViewChange }) => {
   const { id: sessionId } = useParams<{ id: string }>();
   const { session, segments, isLoadingSession, endSessionMutation, persistSegments } = useWorkspaceSession(sessionId);
+
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const { data: clientData } = useQuery({
     queryKey: ['client', session?.clientId],
@@ -261,7 +264,10 @@ const SurveyWorkspaceView: React.FC<SurveyWorkspaceProps> = ({ onBack, onViewCha
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all">
+          <button
+            className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all"
+            onClick={() => setIsSettingsOpen(true)}
+          >
             <Settings className="w-5 h-5" />
           </button>
           <button
@@ -680,6 +686,106 @@ const SurveyWorkspaceView: React.FC<SurveyWorkspaceProps> = ({ onBack, onViewCha
           </div>
         </div>
       </div>
+
+      {/* Settings Modal */}
+      <AnimatePresence>
+        {isSettingsOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSettingsOpen(false)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="relative w-full max-w-lg bg-white rounded-[40px] shadow-2xl overflow-hidden flex flex-col"
+            >
+              <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <h2 className="text-2xl font-bold text-slate-900">会话设置</h2>
+                <button
+                  onClick={() => setIsSettingsOpen(false)}
+                  className="p-2 hover:bg-white rounded-xl transition-all text-slate-400 hover:text-slate-600 shadow-sm"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="p-8 space-y-6">
+                <div className="space-y-4">
+                  <h3 className="text-sm font-bold text-slate-700">录音设置</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs font-medium text-slate-600 block mb-2">录音质量</label>
+                      <select className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <option>高质量 (48kHz)</option>
+                        <option>标准 (22kHz)</option>
+                        <option>低质量 (16kHz)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-slate-600 block mb-2">语言模式</label>
+                      <select className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <option>中文普通话</option>
+                        <option>英文</option>
+                        <option>粤语</option>
+                        <option>其他方言</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-sm font-bold text-slate-700">AI 助手设置</h3>
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                        defaultChecked
+                      />
+                      <span className="text-sm text-slate-700">实时分析建议</span>
+                    </label>
+                    <label className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                        defaultChecked
+                      />
+                      <span className="text-sm text-slate-700">自动生成洞察</span>
+                    </label>
+                    <label className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="text-sm text-slate-700">保存聊天记录</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-8 border-t border-slate-100 bg-slate-50/50 flex gap-3">
+                <button
+                  onClick={() => setIsSettingsOpen(false)}
+                  className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all"
+                >
+                  保存设置
+                </button>
+                <button
+                  onClick={() => setIsSettingsOpen(false)}
+                  className="px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-2xl font-bold hover:bg-slate-50 transition-all"
+                >
+                  取消
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

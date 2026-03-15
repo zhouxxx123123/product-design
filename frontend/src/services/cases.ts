@@ -13,7 +13,7 @@ export interface Case {
   caseType: CaseType;
   content: string;
   summary: string | null;
-  tags: string[] | null;
+  tags: string[];
   status: CaseStatus;
   isPublic: boolean;
   metadata: Record<string, unknown>;

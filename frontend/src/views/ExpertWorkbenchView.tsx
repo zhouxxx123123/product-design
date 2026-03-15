@@ -74,6 +74,7 @@ const ExpertWorkbenchView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showCaseSelectorModal, setShowCaseSelectorModal] = useState(false);
   const [caseIdInput, setCaseIdInput] = useState('');
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   const queryClient = useQueryClient();
   const sessionId = selectedSession?.id ?? null;
@@ -152,6 +153,15 @@ const ExpertWorkbenchView: React.FC = () => {
   });
 
   // ── Handlers ───────────────────────────────────────────────────────────────
+
+  const toggleFavorite = (id: string) => {
+    setFavorites(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const handleAddComment = (_insightId: string) => {
     if (!newComment.trim() || !sessionId) return;
@@ -414,8 +424,11 @@ const ExpertWorkbenchView: React.FC = () => {
                               </div>
                             </div>
                           </div>
-                          <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all">
-                            <Star className="w-4 h-4" />
+                          <button
+                            onClick={() => toggleFavorite(insight.id)}
+                            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                          >
+                            <Star className={cn("w-4 h-4", favorites.has(insight.id) ? "fill-current text-indigo-600" : "")} />
                           </button>
                         </div>
 

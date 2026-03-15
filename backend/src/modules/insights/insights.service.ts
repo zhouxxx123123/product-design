@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import { SessionInsightEntity } from '../../entities/session-insight.entity';
 import { TranscriptSegmentEntity } from '../../entities/transcript-segment.entity';
+import { InterviewSessionEntity } from '../../entities/interview-session.entity';
 import { CreateInsightDto, UpdateInsightDto } from './insights.dto';
 import { AiProxyService } from '../ai-proxy/ai-proxy.service';
 
@@ -15,8 +16,20 @@ export class InsightsService {
     private readonly repo: Repository<SessionInsightEntity>,
     @InjectRepository(TranscriptSegmentEntity)
     private readonly transcriptRepo: Repository<TranscriptSegmentEntity>,
+    @InjectRepository(InterviewSessionEntity)
+    private readonly sessionRepo: Repository<InterviewSessionEntity>,
     private readonly aiProxyService: AiProxyService,
   ) {}
+
+  private async assertSessionExists(sessionId: string, tenantId: string): Promise<void> {
+    const exists = await this.sessionRepo.findOne({
+      where: { id: sessionId, tenantId, deletedAt: IsNull() },
+      select: ['id'],
+    });
+    if (!exists) {
+      throw new NotFoundException(`会话 ${sessionId} 不存在或无权访问`);
+    }
+  }
 
   async findBySession(sessionId: string, tenantId: string): Promise<SessionInsightEntity[]> {
     return this.repo.find({
@@ -31,6 +44,8 @@ export class InsightsService {
     userId: string,
     dto: CreateInsightDto,
   ): Promise<SessionInsightEntity> {
+    await this.assertSessionExists(sessionId, tenantId);
+
     const insight = this.repo.create({
       sessionId,
       tenantId,
@@ -65,6 +80,8 @@ export class InsightsService {
     tenantId: string,
     userId: string,
   ): Promise<SessionInsightEntity[]> {
+    await this.assertSessionExists(sessionId, tenantId);
+
     // 1. Load transcript segments
     const segments = await this.transcriptRepo.find({
       where: { sessionId, tenantId },
@@ -81,7 +98,7 @@ export class InsightsService {
     // 3. Call AI service
     const aiResult = (await this.aiProxyService.extractInsight({
       transcript,
-      interview_id: sessionId,
+      interviewId: sessionId,
     })) as Record<string, unknown>;
 
     // 4. Map AI response { themes, key_quotes, sentiment, summary } → layer 1/2/3 insights

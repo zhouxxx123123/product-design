@@ -135,12 +135,18 @@ export class SessionsService {
     tenantId: string,
     dto: UpdateSessionDto,
   ): Promise<InterviewSessionEntity> {
-    const item = await this.findById(id, tenantId);
+    // Load raw entity (not the spread SessionWithRecording)
+    const entity = await this.repo.findOne({
+      where: { id, tenantId, deletedAt: IsNull() },
+    });
+    if (!entity) {
+      throw new NotFoundException(`访谈会话 ${id} 不存在`);
+    }
     if (dto.interviewDate) {
       dto.interviewDate = new Date(dto.interviewDate);
     }
-    Object.assign(item, dto);
-    return this.repo.save(item);
+    Object.assign(entity, dto);
+    return this.repo.save(entity);
   }
 
   async updateStatus(
@@ -168,6 +174,16 @@ export class SessionsService {
     return { success: true };
   }
 
+  private async assertSessionExists(sessionId: string, tenantId: string): Promise<void> {
+    const exists = await this.repo.findOne({
+      where: { id: sessionId, tenantId, deletedAt: IsNull() },
+      select: ['id'],
+    });
+    if (!exists) {
+      throw new NotFoundException(`会话 ${sessionId} 不存在或无权访问`);
+    }
+  }
+
   async addComment(
     sessionId: string,
     authorId: string,
@@ -176,6 +192,8 @@ export class SessionsService {
     targetType?: string,
     targetId?: string,
   ): Promise<SessionCommentEntity> {
+    await this.assertSessionExists(sessionId, tenantId);
+
     const comment = this.commentsRepo.create({
       sessionId,
       authorId,
@@ -201,6 +219,8 @@ export class SessionsService {
     addedBy: string,
     reason?: string,
   ): Promise<SessionCaseLinkEntity> {
+    await this.assertSessionExists(sessionId, tenantId);
+
     const link = this.caseLinksRepo.create({
       sessionId,
       caseId,

@@ -58,10 +58,11 @@ class EmbeddingService:
             self._client = AsyncOpenAI(
                 api_key=settings.MOONSHOT_API_KEY,
                 base_url=settings.MOONSHOT_BASE_URL,
+                timeout=30.0,
             )
         return self._client
 
-    async def embed_text(self, text: str) -> list[float]:
+    async def embed_text(self, text: str) -> dict:
         """
         将文本字符串嵌入为 1536 维向量。
 
@@ -71,7 +72,7 @@ class EmbeddingService:
             text: 要嵌入的文本（会被截断到 8192 tokens 以内）
 
         Returns:
-            list[float]: 1536 维嵌入向量
+            dict: {"vector": embedding_vector, "model": model_name}
 
         Raises:
             ValueError: 如果文本为空
@@ -93,7 +94,7 @@ class EmbeddingService:
             )
             embedding = response.data[0].embedding
             log.info("文本嵌入完成 (Moonshot API)", dimensions=len(embedding))
-            return embedding
+            return {"vector": embedding, "model": EMBEDDING_MODEL}
         except Exception as e:
             error_str = str(e).lower()
             # 检查是否为权限相关错误 (403, permission_denied, not open 等)
@@ -101,7 +102,7 @@ class EmbeddingService:
                 log.warning("Moonshot 嵌入 API 不可用，使用哈希降级方案", error=str(e))
                 fallback_embedding = _hash_embed(truncated, dims=1536)
                 log.info("文本嵌入完成 (哈希降级)", dimensions=len(fallback_embedding))
-                return fallback_embedding
+                return {"vector": fallback_embedding, "model": "hash-fallback"}
             else:
                 log.error("文本嵌入失败", error=str(e))
                 raise

@@ -13,7 +13,7 @@ import { firstValueFrom } from 'rxjs';
 import { ChatDto } from './dto/chat.dto';
 import { GenerateComponentDto } from './dto/component.dto';
 import { InsightProxyDto } from './dto/insight.dto';
-import { GenerateOutlineDto, OptimizeOutlineDto } from './dto/outline.dto';
+import { GenerateOutlineDto, OptimizeOutlineDto, OutlineSectionDto } from './dto/outline.dto';
 import { CopilotComponentTemplateEntity } from '../../entities/copilot-component-template.entity';
 import { InterviewSessionEntity } from '../../entities/interview-session.entity';
 
@@ -59,6 +59,22 @@ export class AiProxyService {
     throw lastError;
   }
 
+  /**
+   * 将 ChatDto（camelCase）映射为 Python AI 服务期望的 snake_case payload。
+   */
+  private static toChatPayload(
+    dto: ChatDto,
+    extra?: Record<string, unknown>,
+  ): Record<string, unknown> {
+    return {
+      messages: dto.messages,
+      ...(dto.model !== undefined && { model: dto.model }),
+      ...(dto.temperature !== undefined && { temperature: dto.temperature }),
+      ...(dto.maxTokens !== undefined && { max_tokens: dto.maxTokens }),
+      ...extra,
+    };
+  }
+
   async chat(dto: ChatDto): Promise<unknown> {
     const url = `${this.aiServiceUrl}/api/v1/llm/chat`;
     this.logger.debug(`Forwarding non-stream chat request to ${url}`);
@@ -66,7 +82,7 @@ export class AiProxyService {
     return AiProxyService.withRetry(
       () =>
         firstValueFrom(
-          this.httpService.post(url, dto, {
+          this.httpService.post(url, AiProxyService.toChatPayload(dto), {
             headers: { 'Content-Type': 'application/json' },
             timeout: 120_000,
           }),
@@ -92,15 +108,11 @@ export class AiProxyService {
 
     try {
       const response = await firstValueFrom(
-        this.httpService.post(
-          url,
-          { ...dto, stream: true },
-          {
-            headers: { 'Content-Type': 'application/json' },
-            responseType: 'stream',
-            timeout: 300_000,
-          },
-        ),
+        this.httpService.post(url, AiProxyService.toChatPayload(dto, { stream: true }), {
+          headers: { 'Content-Type': 'application/json' },
+          responseType: 'stream',
+          timeout: 300_000,
+        }),
       );
 
       const stream = response.data as NodeJS.ReadableStream & { destroy(): void };
@@ -152,15 +164,11 @@ export class AiProxyService {
 
     try {
       const response = await firstValueFrom(
-        this.httpService.post(
-          url,
-          { ...dto, stream: true },
-          {
-            headers: { 'Content-Type': 'application/json' },
-            responseType: 'stream',
-            timeout: 300_000,
-          },
-        ),
+        this.httpService.post(url, AiProxyService.toChatPayload(dto, { stream: true }), {
+          headers: { 'Content-Type': 'application/json' },
+          responseType: 'stream',
+          timeout: 300_000,
+        }),
       );
 
       const stream = response.data as NodeJS.ReadableStream & { destroy(): void };
@@ -205,10 +213,19 @@ export class AiProxyService {
     const url = `${this.aiServiceUrl}/api/v1/insight/extract`;
     this.logger.debug(`Forwarding insight extraction request to ${url}`);
 
+    // 字段名映射：camelCase DTO → snake_case AI 服务协议
+    const payload = {
+      transcript: dto.transcript,
+      interview_id: dto.interviewId,
+      extract_themes: dto.extractThemes,
+      extract_quotes: dto.extractQuotes,
+      extract_sentiment: dto.extractSentiment,
+    };
+
     return AiProxyService.withRetry(
       () =>
         firstValueFrom(
-          this.httpService.post(url, dto, {
+          this.httpService.post(url, payload, {
             headers: { 'Content-Type': 'application/json' },
             timeout: 120_000,
           }),
@@ -223,25 +240,41 @@ export class AiProxyService {
     });
   }
 
-  async generateOutline(dto: GenerateOutlineDto): Promise<unknown> {
+  async generateOutline(dto: GenerateOutlineDto, tenantId: string): Promise<unknown> {
     const url = `${this.aiServiceUrl}/api/v1/outline/generate`;
     this.logger.debug(`Forwarding outline generation request to ${url}`);
 
-    // 查询 session 获取 title 作为 topic
-    const session = await this.sessionRepo.findOne({ where: { id: dto.sessionId } });
+    // 查询 session 获取 title 作为 topic，添加 tenantId 过滤确保租户隔离
+    const session = await this.sessionRepo.findOne({
+      where: { id: dto.sessionId, tenantId },
+    });
     if (!session) {
       throw new NotFoundException(`Session ${dto.sessionId} not found`);
     }
 
-    // 字段映射：BackEnd DTO → AI 服务 OutlineRequest
+    /**
+     * 字段映射：NestJS GenerateOutlineDto → Python AI OutlineRequest（snake_case）
+     *
+     * | NestJS DTO                        | Python AI 字段  | 说明                                    |
+     * |-----------------------------------|-----------------|-----------------------------------------|
+     * | sessionId → session.title         | topic           | 从 session 表取真实标题作为提纲主题      |
+     * | researchGoals (string[])          | research_goals  | join('；') 拼接为单字符串传入 AI       |
+     * | clientBackground (fallback)       | research_goals  | researchGoals 为空时用客户背景替代       |
+     * | clientBackground                  | target_users    | 描述目标用户背景                         |
+     * | —（固定值）                        | num_questions   | 每章节默认生成问题数，通过常量控制        |
+     */
+    const DEFAULT_NUM_QUESTIONS = 10;
+
     const aiPayload = {
       topic: session.title,
-      research_goals: dto.researchGoals?.join('；') ?? dto.clientBackground ?? undefined,
+      research_goals: dto.researchGoals?.length
+        ? dto.researchGoals.join('；')
+        : (dto.clientBackground ?? undefined),
       target_users: dto.clientBackground ?? undefined,
-      num_questions: 10,
+      num_questions: DEFAULT_NUM_QUESTIONS,
     };
 
-    return AiProxyService.withRetry(
+    const result = await AiProxyService.withRetry(
       () =>
         firstValueFrom(
           this.httpService.post(url, aiPayload, {
@@ -257,28 +290,85 @@ export class AiProxyService {
         'Outline generation service temporarily unavailable. Please try again.',
       );
     });
+
+    // Unwrap FastAPI ApiResponse envelope
+    const body = result as { success: boolean; data: unknown; error?: string };
+    if (!body.success || !body.data) {
+      throw new Error(body.error ?? 'AI outline service returned empty data');
+    }
+    return body.data;
   }
 
-  async optimizeOutline(dto: OptimizeOutlineDto): Promise<unknown> {
+  /**
+   * Python AI优化接口是按单个章节处理的，需要分批调用并合并结果。
+   *
+   * 处理流程：
+   * 1. 将 NestJS 的 OptimizeOutlineDto.existingOutline[] 拆分为多个单章节请求
+   * 2. 并行调用 Python /outline/optimize 接口（每个章节一次调用）
+   * 3. 将返回的 OptimizeResponse.questions（额外问题）追加到原章节的 questions 数组
+   * 4. 返回合并后的完整提纲：{ sections: [...] }
+   */
+  async optimizeOutline(dto: OptimizeOutlineDto): Promise<{ sections: OutlineSectionDto[] }> {
     const url = `${this.aiServiceUrl}/api/v1/outline/optimize`;
-    this.logger.debug(`Forwarding outline optimization request to ${url}`);
+    this.logger.debug(`Optimizing ${dto.existingOutline.length} sections via ${url}`);
 
-    return AiProxyService.withRetry(
-      () =>
-        firstValueFrom(
-          this.httpService.post(url, dto, {
-            headers: { 'Content-Type': 'application/json' },
-            timeout: 120_000,
-          }),
-        ).then((r) => r.data),
-      3,
-      this.logger,
-    ).catch((error: unknown) => {
+    try {
+      // 并行调用 Python AI 服务优化每个章节
+      const optimizedSections = await Promise.all(
+        dto.existingOutline.map(async (section) => {
+          const sectionPayload = AiProxyService.toOptimizePayload(section, dto.feedback);
+
+          const response = await AiProxyService.withRetry(
+            () =>
+              firstValueFrom(
+                this.httpService.post(url, sectionPayload, {
+                  headers: { 'Content-Type': 'application/json' },
+                  timeout: 120_000,
+                }),
+              ).then((r) => r.data),
+            3,
+            this.logger,
+          );
+
+          // 合并原有问题 + AI 建议的额外问题
+          const additionalQuestions = response?.questions || [];
+          return {
+            id: section.id,
+            title: section.title,
+            questions: [...section.questions, ...additionalQuestions],
+            ...(section.notes !== undefined && { notes: section.notes }),
+          };
+        }),
+      );
+
+      return { sections: optimizedSections };
+    } catch (error: unknown) {
       this.logger.error('Outline optimization request failed after retries', error);
       throw new InternalServerErrorException(
         'Outline optimization service temporarily unavailable. Please try again.',
       );
-    });
+    }
+  }
+
+  /**
+   * 将单个 OutlineSectionDto 映射为 Python AI 服务期望的 OptimizeRequest 格式。
+   *
+   * | NestJS DTO 字段           | Python AI 字段  | 说明                                    |
+   * |---------------------------|-----------------|----------------------------------------|
+   * | section.title + questions | section         | Python 只需 {title, questions}，过滤掉 id/notes |
+   * | feedback (可选)           | background      | 优化建议，默认空字符串                   |
+   */
+  private static toOptimizePayload(
+    section: { title: string; questions: string[] },
+    feedback?: string,
+  ): { section: { title: string; questions: string[] }; background: string } {
+    return {
+      section: {
+        title: section.title,
+        questions: section.questions,
+      },
+      background: feedback || '',
+    };
   }
 
   async generateComponent(dto: GenerateComponentDto): Promise<unknown> {

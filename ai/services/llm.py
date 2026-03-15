@@ -101,6 +101,7 @@ class LLMService:
         self.client = AsyncOpenAI(
             api_key=self.api_key,
             base_url=self.base_url,
+            timeout=60.0,
         )
 
     async def chat(

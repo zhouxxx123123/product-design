@@ -7,7 +7,7 @@ import structlog
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from fastapi.websockets import WebSocket, WebSocketDisconnect
 from jose import JWTError, jwt
-from pydantic import BaseModel
+from pydantic import BaseModel, AnyHttpUrl
 
 from core.config import settings
 from services.asr import asr_service
@@ -18,7 +18,7 @@ router = APIRouter()
 
 
 class RecognizeUrlRequest(BaseModel):
-    audio_url: str
+    audio_url: AnyHttpUrl
 
 
 @router.post("/recognize/file")
@@ -45,7 +45,7 @@ async def recognize_url(body: RecognizeUrlRequest):
     """
     logger.info("收到URL音频识别请求", url=body.audio_url)
     try:
-        result = await asr_service.recognize_url(body.audio_url)
+        result = await asr_service.recognize_url(str(body.audio_url))
         return result
     except Exception as exc:
         logger.error("URL音频识别失败", error=str(exc))

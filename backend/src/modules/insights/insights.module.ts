@@ -2,13 +2,18 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SessionInsightEntity } from '../../entities/session-insight.entity';
 import { TranscriptSegmentEntity } from '../../entities/transcript-segment.entity';
+import { InterviewSessionEntity } from '../../entities/interview-session.entity';
 import { AiProxyModule } from '../ai-proxy/ai-proxy.module';
 import { InsightsService } from './insights.service';
 import { InsightsController } from './insights.controller';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([SessionInsightEntity, TranscriptSegmentEntity]),
+    TypeOrmModule.forFeature([
+      SessionInsightEntity,
+      TranscriptSegmentEntity,
+      InterviewSessionEntity,
+    ]),
     AiProxyModule,
   ],
   controllers: [InsightsController],

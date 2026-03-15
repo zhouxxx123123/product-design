@@ -2,79 +2,114 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
 import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsArray, IsEnum } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { CaseEntity, CaseType, CaseStatus } from '../../entities/case.entity';
 import { CaseRepository } from '../case/repositories/case.repository';
 
 export class CreateCaseDto {
+  @ApiProperty({ description: '案例标题', example: 'AI助力医疗器械行业调研分析' })
   @IsString()
   @IsNotEmpty({ message: 'title 不能为空' })
   title: string;
 
+  @ApiPropertyOptional({ description: '行业', example: '医疗器械' })
   @IsOptional()
   @IsString()
   industry?: string;
 
+  @ApiPropertyOptional({ description: '案例类型', enum: CaseType, enumName: 'CaseType' })
   @IsOptional()
   @IsEnum(CaseType)
   caseType?: CaseType;
 
+  @ApiProperty({ description: '案例内容正文', example: '本次调研通过深度访谈和问卷调研...' })
   @IsString()
   @IsNotEmpty({ message: 'content 不能为空' })
   content: string;
 
+  @ApiPropertyOptional({
+    description: '案例摘要',
+    example: '该案例展示了AI在传统医疗器械行业的应用价值...',
+  })
   @IsOptional()
   @IsString()
   summary?: string;
 
+  @ApiPropertyOptional({
+    description: '标签',
+    type: [String],
+    example: ['AI应用', '医疗器械', '深度访谈'],
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
 
+  @ApiPropertyOptional({ description: '元数据', type: 'object' })
   @IsOptional()
   metadata?: Record<string, unknown>;
 
+  @ApiPropertyOptional({ description: '是否公开', default: false })
   @IsOptional()
   @IsBoolean()
   isPublic?: boolean;
 }
 
 export class UpdateCaseDto {
+  @ApiPropertyOptional({ description: '案例标题', example: 'AI助力医疗器械行业调研分析' })
   @IsOptional()
   @IsString()
   @IsNotEmpty()
   title?: string;
 
+  @ApiPropertyOptional({ description: '行业', example: '医疗器械' })
   @IsOptional()
   @IsString()
   industry?: string;
 
+  @ApiPropertyOptional({ description: '案例类型', enum: CaseType, enumName: 'CaseType' })
   @IsOptional()
   @IsEnum(CaseType)
   caseType?: CaseType;
 
+  @ApiPropertyOptional({
+    description: '案例内容正文',
+    example: '本次调研通过深度访谈和问卷调研...',
+  })
   @IsOptional()
   @IsString()
   content?: string;
 
+  @ApiPropertyOptional({
+    description: '案例摘要',
+    example: '该案例展示了AI在传统医疗器械行业的应用价值...',
+  })
   @IsOptional()
   @IsString()
   summary?: string;
 
+  @ApiPropertyOptional({
+    description: '标签',
+    type: [String],
+    example: ['AI应用', '医疗器械', '深度访谈'],
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
 
+  @ApiPropertyOptional({ description: '元数据', type: 'object' })
   @IsOptional()
   metadata?: Record<string, unknown>;
 
+  @ApiPropertyOptional({ description: '是否公开', default: false })
   @IsOptional()
   @IsBoolean()
   isPublic?: boolean;
 
+  @ApiPropertyOptional({ description: '案例状态', enum: CaseStatus, enumName: 'CaseStatus' })
   @IsOptional()
   @IsEnum(CaseStatus)
   status?: CaseStatus;

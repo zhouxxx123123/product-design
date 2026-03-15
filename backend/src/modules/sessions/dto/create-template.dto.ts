@@ -1,4 +1,14 @@
-import { IsString, IsOptional, IsEnum, IsArray, ValidateNested, IsInt, Min } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEnum,
+  IsArray,
+  ValidateNested,
+  IsInt,
+  Min,
+  IsObject,
+  IsNotEmpty,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
 
@@ -17,7 +27,10 @@ export enum TemplateScope {
 }
 
 export class CreateTemplateDto {
-  @ApiProperty({ example: '销售拜访模板', description: 'Template title (mapped to name in entity)' })
+  @ApiProperty({
+    example: '销售拜访模板',
+    description: 'Template title (mapped to name in entity)',
+  })
   @IsString()
   title: string;
 
@@ -47,11 +60,15 @@ export class CreateTemplateDto {
   @Min(1)
   duration?: number;
 
-  @ApiProperty({ example: { sections: [] }, description: 'Template content structure' })
-  @IsOptional()
+  @ApiProperty({
+    example: { sections: [] },
+    description: 'Template content structure (required; use {} for empty template)',
+  })
+  @IsNotEmpty({ message: 'content 不能为空，请传入 {} 或有效内容结构' })
+  @IsObject()
   @ValidateNested()
   @Type(() => Object)
-  content?: Record<string, unknown>;
+  content: Record<string, unknown>;
 
   @ApiPropertyOptional({ enum: TemplateScope, example: TemplateScope.TENANT })
   @IsOptional()

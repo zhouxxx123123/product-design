@@ -273,7 +273,10 @@ const SurveySessionsView: React.FC<SurveySessionsProps> = ({ onViewChange }) => 
                   </td>
                   <td className="px-8 py-6 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all">
+                      <button
+                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                        onClick={() => onViewChange('survey-insights', { sessionId: session.id })}
+                      >
                         <BarChart2 className="w-5 h-5" />
                       </button>
                       <div className="relative">

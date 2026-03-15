@@ -8,5 +8,7 @@ export interface FeatureFlagItem {
 export const featureFlagsApi = {
   list: () => http.get<FeatureFlagItem[]>('/feature-flags'),
   saveAll: (flags: FeatureFlagItem[]) =>
-    http.patch<FeatureFlagItem[]>('/feature-flags', { flags }),
+    http.patch<FeatureFlagItem[]>('/feature-flags', {
+      flags: flags.map(f => ({ key: f.key, enabled: f.enabled })),
+    }),
 };

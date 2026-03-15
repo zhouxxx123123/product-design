@@ -13,11 +13,7 @@ export class AddTemplateIdToInterviewSession1710000027000 implements MigrationIn
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `DROP INDEX IF EXISTS "IDX_interview_sessions_template_id"`,
-    );
-    await queryRunner.query(
-      `ALTER TABLE "interview_sessions" DROP COLUMN IF EXISTS "template_id"`,
-    );
+    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_interview_sessions_template_id"`);
+    await queryRunner.query(`ALTER TABLE "interview_sessions" DROP COLUMN IF EXISTS "template_id"`);
   }
 }

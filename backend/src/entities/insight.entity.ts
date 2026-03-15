@@ -27,8 +27,17 @@ export enum InsightStatus {
 }
 
 /**
- * 洞察实体
- * AI生成的访谈洞察
+ * 洞察实体（全局洞察库，预留）
+ *
+ * ⚠️  当前状态：此实体对应 `insights` 表，已建表但**业务代码尚未使用**。
+ *
+ * 设计意图（未来）：跨会话的全局洞察库，支持按 category 聚合，供专家手动整理。
+ * 与 SessionInsightEntity（session_insights）的区别：
+ *   - InsightEntity      → 全局洞察，手动管理，含审核状态（pending/approved/rejected）
+ *   - SessionInsightEntity → 会话专属，AI 自动生成，三层结构（layer 1/2/3）
+ *
+ * 当前所有 `/sessions/:id/insights` API 均操作 SessionInsightEntity，不涉及此表。
+ * 如需启用全局洞察库功能，请另建独立 module（如 insight-library.module.ts）。
  */
 @Entity('insights')
 @Index(['sessionId', 'category'])

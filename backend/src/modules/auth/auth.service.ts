@@ -6,12 +6,14 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import axios from 'axios';
 import { UserEntity, UserRole } from '../../entities/user.entity';
+import { TenantEntity } from '../../entities/tenant.entity';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtPayload } from './strategies/jwt.strategy';
@@ -41,8 +43,11 @@ export class AuthService {
   constructor(
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
+    @InjectRepository(TenantEntity)
+    private readonly tenantRepository: Repository<TenantEntity>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async login(dto: LoginDto): Promise<AuthResponse> {
@@ -134,32 +139,51 @@ export class AuthService {
       throw new ConflictException('邮箱已被注册');
     }
 
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
-    const user = this.userRepository.create({
-      email: dto.email,
-      password: hashedPassword,
-      displayName: dto.displayName ?? null,
-      role: UserRole.SALES,
-      isActive: true,
-      tenantId: null,
+    // Use transaction to ensure atomic tenant and user creation
+    return await this.dataSource.transaction(async (manager) => {
+      // 1. Create tenant with generated slug
+      const tenantSlug = `company-${crypto.randomBytes(4).toString('hex')}`;
+      const tenant = manager.create(TenantEntity, {
+        name: dto.companyName,
+        slug: tenantSlug,
+        aiConfig: {
+          provider: 'moonshot',
+          model: 'kimi-k2.5',
+          temperature: 0.7,
+        },
+        settings: {},
+      });
+      const savedTenant = await manager.save(TenantEntity, tenant);
+
+      // 2. Create user associated with the tenant
+      const hashedPassword = await bcrypt.hash(dto.password, 10);
+      const user = manager.create(UserEntity, {
+        email: dto.email,
+        password: hashedPassword,
+        displayName: dto.displayName ?? null,
+        role: UserRole.SALES,
+        isActive: true,
+        tenantId: savedTenant.id,
+      });
+      const savedUser = await manager.save(UserEntity, user);
+
+      // 3. Generate tokens and save refresh token
+      const tokens = await this.generateTokens(savedUser);
+      await this.saveRefreshTokenHash(savedUser.id, tokens.refreshToken);
+
+      return {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        user: {
+          id: savedUser.id,
+          displayName: savedUser.displayName ?? savedUser.email,
+          email: savedUser.email,
+          role: savedUser.role,
+          tenantId: savedUser.tenantId,
+          isActive: savedUser.isActive,
+        },
+      };
     });
-    await this.userRepository.save(user);
-
-    const tokens = await this.generateTokens(user);
-    await this.saveRefreshTokenHash(user.id, tokens.refreshToken);
-
-    return {
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      user: {
-        id: user.id,
-        displayName: user.displayName ?? user.email,
-        email: user.email,
-        role: user.role,
-        tenantId: user.tenantId,
-        isActive: user.isActive,
-      },
-    };
   }
 
   private async generateTokens(
@@ -199,6 +223,35 @@ export class AuthService {
   // ── WeChat OAuth Methods ─────────────────────────────────────────────────────
 
   /**
+   * 生成安全的 OAuth state 参数（用于防止 CSRF 攻击）
+   */
+  generateSecureOAuthState(): string {
+    const nonce = crypto.randomBytes(16).toString('hex');
+    const state = this.jwtService.sign(
+      { nonce, purpose: 'oauth_state' },
+      {
+        secret: this.configService.get('JWT_SECRET'),
+        expiresIn: '10m',
+      },
+    );
+    return state;
+  }
+
+  /**
+   * 验证 OAuth state 参数
+   */
+  validateOAuthState(state: string): boolean {
+    try {
+      const payload = this.jwtService.verify(state, {
+        secret: this.configService.get('JWT_SECRET'),
+      });
+      return payload.purpose === 'oauth_state';
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * 生成微信扫码登录链接
    */
   getWechatAuthUrl(redirectUri: string, state?: string): string {
@@ -212,7 +265,7 @@ export class AuthService {
       redirect_uri: redirectUri,
       response_type: 'code',
       scope: 'snsapi_login',
-      state: state ?? Math.random().toString(36).substring(7),
+      state: state ?? this.generateSecureOAuthState(),
     });
 
     return `https://open.weixin.qq.com/connect/qrconnect?${params.toString()}#wechat_redirect`;
@@ -281,6 +334,7 @@ export class AuthService {
         role: UserRole.SALES,
         isActive: true,
         password: null,
+        tenantId: null, // WeChat users start without tenant - they need to join or create one
       });
       await this.userRepository.save(user);
     } else {

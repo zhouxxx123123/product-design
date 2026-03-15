@@ -25,8 +25,18 @@ async def lifespan(app: FastAPI):
     # Startup
     configure_logging()
     logger = structlog.get_logger()
+
+    # Critical security check - JWT_SECRET must be set in production
+    if not settings.JWT_SECRET:
+        logger.error("JWT_SECRET is not configured - WebSocket ASR authentication will be bypassed!")
+        raise RuntimeError(
+            "JWT_SECRET is not configured. "
+            "Set JWT_SECRET environment variable before starting the server."
+        )
+
     if not settings.MOONSHOT_API_KEY:
-        logger.error("MOONSHOT_API_KEY 未配置，LLM 功能将不可用")
+        logger.warning("MOONSHOT_API_KEY 未配置，LLM 功能将不可用")
+
     logger.info("Starting AI Service", version=settings.APP_VERSION)
     yield
     # Shutdown

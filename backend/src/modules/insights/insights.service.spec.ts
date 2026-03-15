@@ -339,7 +339,7 @@ describe('InsightsService', () => {
 
       expect(mockAiProxyService.extractInsight).toHaveBeenCalledWith({
         transcript: '[Interviewer]: What are your pain points?\n[User]: Cost is too high',
-        interview_id: SESSION_ID,
+        interviewId: SESSION_ID,
       });
 
       expect(insightRepo.delete).toHaveBeenCalledWith({
@@ -476,7 +476,7 @@ describe('InsightsService', () => {
 
       expect(mockAiProxyService.extractInsight).toHaveBeenCalledWith({
         transcript: '[未知]: Anonymous message',
-        interview_id: SESSION_ID,
+        interviewId: SESSION_ID,
       });
     });
   });

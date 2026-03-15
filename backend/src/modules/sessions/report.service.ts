@@ -188,6 +188,15 @@ export class ReportService {
 
   // ── Private helpers ────────────────────────────────────────────────────────
 
+  private static escapeHtml(unsafe: string): string {
+    return unsafe
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   private async loadSession(sessionId: string, tenantId: string): Promise<InterviewSessionEntity> {
     const session = await this.sessionsRepo.findOne({
       where: { id: sessionId, tenantId } as never,
@@ -199,7 +208,7 @@ export class ReportService {
   private buildHtml(session: InterviewSessionEntity): string {
     return `<!DOCTYPE html>
 <html lang="zh-CN">
-<head><meta charset="UTF-8"><title>${session.title} - 调研报告</title>
+<head><meta charset="UTF-8"><title>${ReportService.escapeHtml(session.title ?? '')} - 调研报告</title>
 <style>
   body { font-family: sans-serif; padding: 40px; color: #1e293b; }
   h1 { font-size: 28px; margin-bottom: 8px; }
@@ -210,19 +219,19 @@ export class ReportService {
 </style>
 </head>
 <body>
-  <h1>${session.title}</h1>
-  <p class="meta">状态: ${session.status} | 访谈日期: ${session.interviewDate?.toISOString().slice(0, 10) ?? '未设置'}</p>
+  <h1>${ReportService.escapeHtml(session.title ?? '')}</h1>
+  <p class="meta">状态: ${ReportService.escapeHtml(session.status ?? '')} | 访谈日期: ${ReportService.escapeHtml(session.interviewDate?.toISOString().slice(0, 10) ?? '未设置')}</p>
   <section>
     <h2>原始转写</h2>
-    <pre>${session.rawTranscript ?? '（暂无转写内容）'}</pre>
+    <pre>${ReportService.escapeHtml(session.rawTranscript ?? '（暂无转写内容）')}</pre>
   </section>
   <section>
     <h2>结构化摘要</h2>
-    <pre>${JSON.stringify(session.structuredSummary ?? {}, null, 2)}</pre>
+    <pre>${ReportService.escapeHtml(JSON.stringify(session.structuredSummary ?? {}, null, 2))}</pre>
   </section>
   <section>
     <h2>执行摘要</h2>
-    <pre>${JSON.stringify(session.executiveSummary ?? {}, null, 2)}</pre>
+    <pre>${ReportService.escapeHtml(JSON.stringify(session.executiveSummary ?? {}, null, 2))}</pre>
   </section>
 </body>
 </html>`;

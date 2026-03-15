@@ -1,9 +1,10 @@
-import { IsString, IsOptional, IsInt, IsUUID, Min } from 'class-validator';
+import { IsString, IsOptional, IsInt, IsUUID, MaxLength, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateDictionaryNodeDto {
   @ApiProperty({ example: '金融科技', description: '节点名称' })
   @IsString()
+  @MaxLength(100)
   name: string;
 
   @ApiPropertyOptional({ example: 'fintech', description: '节点编码' })
@@ -32,6 +33,7 @@ export class UpdateDictionaryNodeDto {
   @ApiPropertyOptional({ example: '金融科技', description: '节点名称' })
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   name?: string;
 
   @ApiPropertyOptional({ example: 'fintech', description: '节点编码' })

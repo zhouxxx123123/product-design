@@ -64,4 +64,3 @@ export class BulkCreateTranscriptSegmentDto {
   @Type(() => TranscriptSegmentItemDto)
   segments: TranscriptSegmentItemDto[];
 }
-

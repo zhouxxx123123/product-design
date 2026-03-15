@@ -9,6 +9,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { UserEntity } from '../../entities/user.entity';
+import { TenantEntity } from '../../entities/tenant.entity';
 import { UsersModule } from '../users/users.module';
 
 @Module({
@@ -25,7 +26,7 @@ import { UsersModule } from '../users/users.module';
         },
       }),
     }),
-    TypeOrmModule.forFeature([UserEntity]),
+    TypeOrmModule.forFeature([UserEntity, TenantEntity]),
     UsersModule,
   ],
   controllers: [AuthController],

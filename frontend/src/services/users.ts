@@ -8,19 +8,19 @@ export interface User {
   isActive: boolean;
   tenantId: string;
   createdAt: string;
-  avatar?: string;
+  avatarUrl?: string;
 }
 
 export interface CreateUserDto {
   displayName: string;
   email: string;
-  role: 'sales' | 'expert';
+  role: 'sales' | 'expert' | 'admin';
   password: string;
 }
 
 export interface UpdateUserDto {
   displayName?: string;
-  role?: string;
+  role?: 'sales' | 'expert' | 'admin';
   isActive?: boolean;
 }
 

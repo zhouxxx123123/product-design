@@ -1,9 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { UserEntity } from '../../entities/user.entity';
-import { CreateUserDto, UpdateUserDto, UserListQueryDto, UserRole } from './dto/user.dto';
+import {
+  CreateUserDto,
+  UpdateUserDto,
+  UserListQueryDto,
+  UserRole,
+  UserResponseDto,
+} from './dto/user.dto';
 
 @Injectable()
 export class UsersService {
@@ -12,12 +18,12 @@ export class UsersService {
     private readonly userRepository: Repository<UserEntity>,
   ) {}
 
-  async findById(id: string): Promise<UserEntity> {
+  async findById(id: string): Promise<UserResponseDto> {
     const user = await this.userRepository.findOne({ where: { id } });
     if (!user) {
       throw new NotFoundException(`User with id ${id} not found`);
     }
-    return user;
+    return UserResponseDto.fromEntity(user);
   }
 
   async findByEmail(email: string): Promise<UserEntity | null> {
@@ -46,7 +52,7 @@ export class UsersService {
       .getManyAndCount();
 
     return {
-      data,
+      data: data.map(UserResponseDto.fromEntity),
       total,
       page,
       limit,
@@ -54,7 +60,7 @@ export class UsersService {
     };
   }
 
-  async create(tenantId: string, dto: CreateUserDto): Promise<UserEntity> {
+  async create(tenantId: string, dto: CreateUserDto): Promise<UserResponseDto> {
     const hashedPassword = await bcrypt.hash(dto.password, 10);
     const user = this.userRepository.create({
       ...dto,
@@ -62,10 +68,11 @@ export class UsersService {
       tenantId,
       role: dto.role ?? UserRole.SALES,
     });
-    return this.userRepository.save(user);
+    const saved = await this.userRepository.save(user);
+    return UserResponseDto.fromEntity(saved);
   }
 
-  async update(id: string, tenantId: string, dto: UpdateUserDto): Promise<UserEntity> {
+  async update(id: string, tenantId: string, dto: UpdateUserDto, callerRole: UserRole): Promise<UserResponseDto> {
     const user = await this.userRepository.findOne({
       where: { id, tenantId, deletedAt: IsNull() },
     });
@@ -73,12 +80,18 @@ export class UsersService {
       throw new NotFoundException(`User with id ${id} not found`);
     }
 
+    // Only admins can change user roles
+    if (dto.role !== undefined && callerRole !== UserRole.ADMIN) {
+      throw new ForbiddenException('只有管理员可以修改用户角色');
+    }
+
     if (dto.password) {
       dto = { ...dto, password: await bcrypt.hash(dto.password, 10) };
     }
 
     Object.assign(user, dto);
-    return this.userRepository.save(user);
+    const saved = await this.userRepository.save(user);
+    return UserResponseDto.fromEntity(saved);
   }
 
   async softDelete(id: string, tenantId: string): Promise<{ success: boolean }> {

@@ -23,6 +23,8 @@ export interface Session {
   recordingUrl?: string;
   insightsCount?: number;
   commentsCount?: number;
+  startedAt?: string;
+  completedAt?: string;
 }
 
 export interface CreateSessionDto {

@@ -65,7 +65,7 @@ export const insightsApi = {
   update: (insightId: string, dto: UpdateInsightDto) =>
     http.patch<Insight>(`/insights/${insightId}`, dto),
   extractFromSession: (sessionId: string) =>
-    http.post<Insight[]>(`/sessions/${sessionId}/insights/extract`),
+    http.post<Insight[]>(`/sessions/${sessionId}/insights/extract?force=true`),
   delete: (insightId: string) =>
     http.delete<{ success: boolean }>(`/insights/${insightId}`),
 };

@@ -8,7 +8,9 @@ import {
   PrimaryGeneratedColumn,
   BeforeInsert,
   BeforeUpdate,
+  OneToMany,
 } from 'typeorm';
+import { ClientContactEntity } from './client-contact.entity';
 
 /**
  * 客户档案实体
@@ -55,6 +57,9 @@ export class ClientProfileEntity {
 
   @Column({ type: 'timestamptz', name: 'last_interview_at', nullable: true })
   lastInterviewAt: Date | null;
+
+  @OneToMany(() => ClientContactEntity, contact => contact.client, { cascade: true, eager: false })
+  contacts: ClientContactEntity[];
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt: Date;

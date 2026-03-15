@@ -1,5 +1,4 @@
-import { IsEnum, IsString, IsBoolean, IsNumber, IsUUID } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 // 本地重新声明，避免 Swagger plugin 生成 entity 绝对路径
 export enum FeatureFlagCategory {
@@ -14,27 +13,31 @@ export enum FeatureFlagCategory {
  * What the frontend receives when querying feature flags
  */
 export class FeatureFlagDefinitionResponseDto {
-  @IsUUID()
+  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000', description: '功能开关 ID' })
   id: string;
 
-  @IsString()
+  @ApiProperty({ example: 'crm_module', description: '功能开关 key（唯一标识）' })
   key: string;
 
-  @IsString()
+  @ApiProperty({ example: 'CRM 模块', description: '功能开关显示名称' })
   name: string;
 
-  @IsString()
-  description: string;
+  @ApiPropertyOptional({ example: '客户关系管理模块', description: '功能说明' })
+  description: string | null;
 
-  @IsEnum(FeatureFlagCategory)
+  @ApiProperty({
+    enum: FeatureFlagCategory,
+    example: FeatureFlagCategory.SALES,
+    description: '所属分类',
+  })
   category: FeatureFlagCategory;
 
-  @IsString()
+  @ApiProperty({ example: 'UsersIcon', description: '图标名称（前端映射 lucide-react 图标）' })
   iconName: string;
 
-  @IsNumber()
+  @ApiProperty({ example: 1, description: '展示排序（升序）' })
   sortOrder: number;
 
-  @IsBoolean()
-  enabled: boolean; // Tenant-specific state from tenant_features table
+  @ApiProperty({ example: true, description: '该租户是否已开启此功能（来自 tenant_features 表）' })
+  enabled: boolean;
 }

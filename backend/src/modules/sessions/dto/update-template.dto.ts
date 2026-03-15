@@ -6,7 +6,7 @@ import { CreateTemplateDto } from './create-template.dto';
 export class UpdateTemplateDto extends PartialType(CreateTemplateDto) {
   @ApiPropertyOptional({
     example: true,
-    description: 'Whether template is active'
+    description: 'Whether template is active',
   })
   @IsOptional()
   @IsBoolean()
@@ -14,7 +14,7 @@ export class UpdateTemplateDto extends PartialType(CreateTemplateDto) {
 
   @ApiPropertyOptional({
     example: false,
-    description: 'Whether template is default'
+    description: 'Whether template is default',
   })
   @IsOptional()
   @IsBoolean()

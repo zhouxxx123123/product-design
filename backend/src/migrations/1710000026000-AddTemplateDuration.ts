@@ -10,8 +10,6 @@ export class AddTemplateDuration1710000026000 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `ALTER TABLE "templates" DROP COLUMN IF EXISTS "duration"`,
-    );
+    await queryRunner.query(`ALTER TABLE "templates" DROP COLUMN IF EXISTS "duration"`);
   }
 }

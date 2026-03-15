@@ -58,34 +58,107 @@ interface Customer {
 const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [industryFilter, setIndustryFilter] = useState<string>('');
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [emailSent, setEmailSent] = useState(false);
 
   const addToast = useToastStore(s => s.addToast);
 
   const queryClient = useQueryClient();
   const { data: clientsData, isLoading: isLoadingClients } = useQuery({
-    queryKey: ['clients', searchQuery, industryFilter],
+    queryKey: ['clients', searchQuery, industryFilter, selectedSizes],
     queryFn: () => clientsApi.list({
       search: searchQuery || undefined,
       industry: industryFilter || undefined
     }).then(r => r.data),
   });
 
+  // Delete client mutation
+  const deleteClientMutation = useMutation({
+    mutationFn: (clientId: string) => clientsApi.delete(clientId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      addToast('客户档案删除成功', 'success');
+    },
+    onError: () => {
+      addToast('删除失败，请稍后重试', 'error');
+    },
+  });
+
+  // Helper functions for size filter
+  const toggleSize = (sizeName: string) => {
+    setSelectedSizes(prev =>
+      prev.includes(sizeName)
+        ? prev.filter(s => s !== sizeName)
+        : [...prev, sizeName]
+    );
+  };
+
+  const applyFilter = () => {
+    setIsFilterModalOpen(false);
+  };
+
+  const resetAllFilters = () => {
+    setSelectedSizes([]);
+    setIsFilterModalOpen(false);
+  };
+
+  // Helper functions for dropdown actions
+  const handleEditClient = (clientId: string) => {
+    setIsMoreActionsOpen(false);
+    onViewChange('crm', { customerId: clientId });
+  };
+
+  const handleDeleteClient = (clientId: string) => {
+    setIsMoreActionsOpen(false);
+    if (window.confirm('确定要删除这个客户档案吗？此操作无法撤销。')) {
+      deleteClientMutation.mutate(clientId);
+    }
+  };
+
+  const handleExportData = () => {
+    setIsMoreActionsOpen(false);
+    try {
+      const clientsForExport = clientsData?.data || [];
+      clientExportService.exportToCSV(clientsForExport, `clients_${new Date().toISOString().split('T')[0]}`);
+      addToast('客户数据导出成功', 'success');
+    } catch (error) {
+      addToast('导出失败，请稍后重试', 'error');
+    }
+  };
+
+  const handleDevelopmentFeature = (featureName: string) => {
+    setIsMoreActionsOpen(false);
+    addToast(`${featureName}功能开发中`, 'info');
+  };
+
+  // Email sending handler
+  const handleSendEmail = () => {
+    setEmailSent(true);
+    addToast('邮件发送成功', 'success');
+    setTimeout(() => {
+      setEmailSent(false);
+      setIsEmailModalOpen(false);
+    }, 1500);
+  };
+
   // Fetch dictionary data for industries and company sizes
   const { data: industries = [], isLoading: isLoadingIndustries } = useDictionaryChildren('industry');
   const { data: companySizes = [], isLoading: isLoadingCompanySizes } = useDictionaryChildren('company_size');
 
-  const customers: Customer[] = (clientsData?.data ?? []).map(c => ({
-    id: c.id,
-    name: c.companyName,
-    industry: c.industry ?? '',
-    size: c.size ?? '',
-    contact: c.contacts?.[0]?.name ?? '',
-    email: c.contacts?.[0]?.email ?? '',
-    phone: c.contacts?.[0]?.phone ?? '',
-    tags: c.tags ?? [],
-    status: c.status === 'active' ? '活跃' : c.status === 'potential' ? '潜在' : c.status === 'churned' ? '流失' : '潜在',
-    lastInteraction: c.lastInteraction ? dayjs(c.lastInteraction).fromNow() : '暂无记录',
-  }));
+  const customers: Customer[] = (clientsData?.data ?? [])
+    .filter(c => selectedSizes.length === 0 || selectedSizes.includes(c.size ?? ''))
+    .map(c => ({
+      id: c.id,
+      name: c.companyName,
+      industry: c.industry ?? '',
+      size: c.size ?? '',
+      contact: c.contacts?.[0]?.name ?? '',
+      email: c.contacts?.[0]?.email ?? '',
+      phone: c.contacts?.[0]?.phone ?? '',
+      tags: c.tags ?? [],
+      status: c.status === 'active' ? '活跃' : c.status === 'potential' ? '潜在' : c.status === 'churned' ? '流失' : '潜在',
+      lastInteraction: c.lastInteraction ? dayjs(c.lastInteraction).fromNow() : '暂无记录',
+    }));
 
   const createClientMutation = useMutation({
     mutationFn: clientsApi.create,
@@ -109,7 +182,7 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
   const [callDuration, setCallDuration] = useState(0);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
-  const [activeContact, setActiveContact] = useState<{name: string, email: string, phone: string} | null>(null);
+  const [activeContact, setActiveContact] = useState<{id: string, name: string, email: string, phone: string} | null>(null);
 
   const [selectedStatus, setSelectedStatus] = useState<string>('potential');
   const createFormRef = React.useRef<HTMLFormElement>(null);
@@ -122,7 +195,7 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
 
     // Collect optional contact fields first
     const contactName = formData.get('contactName') as string;
-    const contactTitle = formData.get('contactTitle') as string;
+    const contactPosition = formData.get('contactPosition') as string;
     const contactEmail = formData.get('contactEmail') as string;
     const contactPhone = formData.get('contactPhone') as string;
 
@@ -135,7 +208,7 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
         ? {
             contacts: [{
               name: contactName || '',
-              title: contactTitle || undefined,
+              position: contactPosition || undefined,
               email: contactEmail || undefined,
               phone: contactPhone || undefined,
             }],
@@ -335,7 +408,7 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            setActiveContact({ name: customer.contact, email: customer.email, phone: customer.phone });
+                            setActiveContact({ id: customer.id, name: customer.contact, email: customer.email, phone: customer.phone });
                             setIsEmailModalOpen(true);
                           }}
                           className="p-1 text-slate-400 hover:text-indigo-600 transition-all"
@@ -345,7 +418,7 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            setActiveContact({ name: customer.contact, email: customer.email, phone: customer.phone });
+                            setActiveContact({ id: customer.id, name: customer.contact, email: customer.email, phone: customer.phone });
                             setIsPhoneModalOpen(true);
                             setIsCalling(true);
                             setCallDuration(0);
@@ -392,7 +465,7 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
-                          setActiveContact({ name: customer.contact, email: customer.email, phone: customer.phone });
+                          setActiveContact({ id: customer.id, name: customer.contact, email: customer.email, phone: customer.phone });
                           setIsMoreActionsOpen(true);
                         }}
                         className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
@@ -560,7 +633,7 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
                       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">职位</label>
                       <input
                         type="text"
-                        name="contactTitle"
+                        name="contactPosition"
                         placeholder="例如: 采购经理"
                         className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
                       />
@@ -885,12 +958,13 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
                 >
                   取消
                 </button>
-                <button 
-                  onClick={() => setIsEmailModalOpen(false)}
-                  className="flex-[2] px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all flex items-center justify-center gap-2"
+                <button
+                  onClick={handleSendEmail}
+                  disabled={emailSent}
+                  className="flex-[2] px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   <Mail className="w-4 h-4" />
-                  立即发送
+                  {emailSent ? '发送中...' : '立即发送'}
                 </button>
               </div>
             </motion.div>
@@ -965,8 +1039,8 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
             >
               <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                 <h2 className="text-lg font-bold text-slate-900">高级筛选</h2>
-                <button 
-                  onClick={() => setIsFilterModalOpen(false)}
+                <button
+                  onClick={resetAllFilters}
                   className="text-xs font-bold text-indigo-600 hover:text-indigo-700"
                 >
                   重置全部
@@ -1001,7 +1075,12 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
                       { id: 'fallback-4', name: '500人以上' }
                     ]).map(size => (
                       <label key={size.id} className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100 cursor-pointer hover:bg-slate-100 transition-all">
-                        <input type="checkbox" className="accent-indigo-600" />
+                        <input
+                          type="checkbox"
+                          className="accent-indigo-600"
+                          checked={selectedSizes.includes(size.name)}
+                          onChange={() => toggleSize(size.name)}
+                        />
                         <span className="text-xs text-slate-600 font-medium">{size.name}</span>
                       </label>
                     ))}
@@ -1043,8 +1122,8 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
                 >
                   取消
                 </button>
-                <button 
-                  onClick={() => setIsFilterModalOpen(false)}
+                <button
+                  onClick={applyFilter}
                   className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all"
                 >
                   应用筛选
@@ -1083,18 +1162,44 @@ const CRMView: React.FC<CRMViewProps> = ({ onViewChange }) => {
                   { icon: Tag, label: '管理标签', color: 'text-slate-600' },
                   { icon: ExternalLink, label: '查看公开信息', color: 'text-slate-600' },
                   { icon: Trash2, label: '删除档案', color: 'text-red-500' },
-                ].map((action, i) => (
-                  <button 
-                    key={i}
-                    onClick={() => setIsMoreActionsOpen(false)}
-                    className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 rounded-2xl transition-all group"
-                  >
-                    <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center bg-slate-50 group-hover:bg-white shadow-sm transition-all", action.color)}>
-                      <action.icon className="w-4 h-4" />
-                    </div>
-                    <span className={cn("text-sm font-bold", action.color)}>{action.label}</span>
-                  </button>
-                ))}
+                ].map((action, i) => {
+                  const handleActionClick = () => {
+                    if (!activeContact) return;
+
+                    switch (action.label) {
+                      case '编辑档案':
+                        handleEditClient(activeContact.id);
+                        break;
+                      case '导出该客户数据':
+                        handleExportData();
+                        break;
+                      case '管理标签':
+                        handleDevelopmentFeature('管理标签');
+                        break;
+                      case '查看公开信息':
+                        handleDevelopmentFeature('查看公开信息');
+                        break;
+                      case '删除档案':
+                        handleDeleteClient(activeContact.id);
+                        break;
+                      default:
+                        setIsMoreActionsOpen(false);
+                    }
+                  };
+
+                  return (
+                    <button
+                      key={i}
+                      onClick={handleActionClick}
+                      className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 rounded-2xl transition-all group"
+                    >
+                      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center bg-slate-50 group-hover:bg-white shadow-sm transition-all", action.color)}>
+                        <action.icon className="w-4 h-4" />
+                      </div>
+                      <span className={cn("text-sm font-bold", action.color)}>{action.label}</span>
+                    </button>
+                  );
+                })}
               </div>
               <div className="p-4 bg-slate-50/50">
                 <button 

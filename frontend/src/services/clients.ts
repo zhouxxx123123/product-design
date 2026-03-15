@@ -3,7 +3,7 @@ import { PaginatedResponse } from './users';
 
 export interface Contact {
   name: string;
-  title?: string;
+  position?: string;
   phone?: string;
   email?: string;
 }

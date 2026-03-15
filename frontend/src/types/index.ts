@@ -20,11 +20,15 @@ export type ViewType =
 
 export interface User {
   id: string;
-  name: string;
   email: string;
+  displayName: string;
   role: string;
-  status: '活跃' | '离线' | '待处理';
-  avatar: string;
+  tenantId: string;
+  isActive: boolean;
+  createdAt: string;
+  // Legacy / display helpers
+  name?: string;      // alias for displayName, for backward compat
+  avatar?: string;    // optional avatar URL
 }
 
 export interface SurveySession {
@@ -192,6 +196,8 @@ export interface TemplateCategoryFilter {
 export enum TemplateType {
   INTERVIEW = 'interview',
   QUESTIONNAIRE = 'questionnaire',
+  OUTLINE = 'outline',
+  REPORT = 'report',
 }
 
 // ── Default Template Sections ──

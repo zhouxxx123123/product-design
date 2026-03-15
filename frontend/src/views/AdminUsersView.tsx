@@ -27,6 +27,10 @@ const AdminUsersView: React.FC = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editForm, setEditForm] = useState<UpdateUserDto>({});
 
+  // Permission Modal state
+  const [permissionUserId, setPermissionUserId] = useState<string | null>(null);
+  const [selectedRole, setSelectedRole] = useState<'admin' | 'sales' | 'expert'>('sales');
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 20;
@@ -302,8 +306,8 @@ const AdminUsersView: React.FC = () => {
                 <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      {user.avatar
-                        ? <img src={user.avatar} alt={user.displayName} className="w-8 h-8 rounded-full border border-slate-200" referrerPolicy="no-referrer" />
+                      {user.avatarUrl
+                        ? <img src={user.avatarUrl} alt={user.displayName} className="w-8 h-8 rounded-full border border-slate-200" referrerPolicy="no-referrer" />
                         : <div className="w-8 h-8 rounded-full border border-slate-200 bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500">{user.displayName.charAt(0)}</div>
                       }
                       <div>
@@ -354,14 +358,23 @@ const AdminUsersView: React.FC = () => {
                               <button
                                 onClick={() => {
                                   setEditingUser(user);
-                                  setEditForm({ displayName: user.displayName, role: user.role, isActive: user.isActive });
+                                  setEditForm({ displayName: user.displayName, role: user.role as UpdateUserDto['role'], isActive: user.isActive });
                                   setActiveMenuId(null);
                                 }}
                                 className="w-full px-4 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors">
                                 <Edit2 className="w-4 h-4 text-slate-400" />
                                 编辑资料
                               </button>
-                              <button className="w-full px-4 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors">
+                              <button
+                                onClick={() => {
+                                  const user = users.find(u => u.id === activeMenuId);
+                                  if (user) {
+                                    setPermissionUserId(user.id);
+                                    setSelectedRole(user.role as 'admin' | 'sales' | 'expert');
+                                    setActiveMenuId(null);
+                                  }
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors">
                                 <Shield className="w-4 h-4 text-slate-400" />
                                 权限设置
                               </button>
@@ -526,7 +539,7 @@ const AdminUsersView: React.FC = () => {
                   <label className="text-sm font-bold text-slate-700 block">角色</label>
                   <select
                     value={editForm.role || ''}
-                    onChange={e => setEditForm(prev => ({ ...prev, role: e.target.value }))}
+                    onChange={e => setEditForm(prev => ({ ...prev, role: e.target.value as UpdateUserDto['role'] }))}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all appearance-none cursor-pointer"
                   >
                     <option value="sales">销售</option>
@@ -560,6 +573,88 @@ const AdminUsersView: React.FC = () => {
                   className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {updateMutation.isPending ? '保存中...' : '保存修改'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Permission Settings Modal */}
+      <AnimatePresence>
+        {permissionUserId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setPermissionUserId(null)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="relative w-full max-w-md bg-white rounded-[32px] shadow-2xl overflow-hidden"
+            >
+              <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900">权限设置</h2>
+                  <p className="text-sm text-slate-500 mt-1">修改用户的角色权限。</p>
+                </div>
+                <button
+                  onClick={() => setPermissionUserId(null)}
+                  className="p-2 hover:bg-white rounded-xl transition-all text-slate-400 hover:text-slate-600 shadow-sm"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="p-8 space-y-6">
+                <div className="space-y-4">
+                  <label className="text-sm font-bold text-slate-700 block">选择角色</label>
+                  <div className="space-y-3">
+                    {[
+                      { value: 'admin', label: '管理员', desc: '拥有系统完整管理权限' },
+                      { value: 'sales', label: '销售', desc: '可以管理客户和调研项目' },
+                      { value: 'expert', label: '专家', desc: '可以查看和分析调研数据' }
+                    ].map((role) => (
+                      <label key={role.value} className="flex items-start gap-3 cursor-pointer group p-4 border border-slate-200 rounded-2xl hover:border-indigo-200 hover:bg-indigo-50/30 transition-all">
+                        <input
+                          type="radio"
+                          name="role"
+                          value={role.value}
+                          checked={selectedRole === role.value}
+                          onChange={(e) => setSelectedRole(e.target.value as 'admin' | 'sales' | 'expert')}
+                          className="mt-1 w-4 h-4 border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <div className="flex-1">
+                          <div className="text-sm font-semibold text-slate-900 group-hover:text-indigo-700 transition-colors">{role.label}</div>
+                          <div className="text-xs text-slate-500 mt-0.5">{role.desc}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="p-8 border-t border-slate-100 bg-slate-50/50 flex gap-3">
+                <button
+                  onClick={() => setPermissionUserId(null)}
+                  className="flex-1 px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-2xl font-bold hover:bg-slate-50 transition-all"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={() => {
+                    updateMutation.mutate({
+                      id: permissionUserId,
+                      dto: { role: selectedRole }
+                    });
+                    setPermissionUserId(null);
+                  }}
+                  disabled={updateMutation.isPending}
+                  className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {updateMutation.isPending ? '保存中...' : '确认修改'}
                 </button>
               </div>
             </motion.div>

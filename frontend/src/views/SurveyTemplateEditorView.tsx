@@ -56,6 +56,10 @@ const SurveyTemplateEditorView: React.FC<SurveyTemplateEditorViewProps> = ({ onB
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [showAiInput, setShowAiInput] = useState(false);
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [linkInputValue, setLinkInputValue] = useState('');
+  const [aiInput, setAiInput] = useState('');
+  const [expandedQuestionSettings, setExpandedQuestionSettings] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [showAiEnhanceModal, setShowAiEnhanceModal] = useState(false);
   const [enhancePrompt, setEnhancePrompt] = useState('');
@@ -437,9 +441,10 @@ const SurveyTemplateEditorView: React.FC<SurveyTemplateEditorViewProps> = ({ onB
                           <Paperclip className="w-3 h-3" />
                           <span className="text-[10px] font-bold">附件</span>
                         </button>
-                        <button 
+                        <button
                           className="p-1.5 bg-slate-50 border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 rounded-lg transition-all shadow-sm flex items-center gap-1"
                           title="引用链接"
+                          onClick={() => setShowLinkInput(true)}
                         >
                           <Link className="w-3 h-3" />
                           <span className="text-[10px] font-bold">链接</span>
@@ -448,8 +453,11 @@ const SurveyTemplateEditorView: React.FC<SurveyTemplateEditorViewProps> = ({ onB
                           id="editor-ai-file-upload"
                           type="file"
                           className="hidden"
-                          onChange={(_e) => {
-                            // Handle file upload
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            setAiPrompt(prev => prev + ` [附件: ${file.name}]`);
+                            e.target.value = '';
                           }}
                         />
                       </div>
@@ -478,6 +486,51 @@ const SurveyTemplateEditorView: React.FC<SurveyTemplateEditorViewProps> = ({ onB
                       )}
                       {isAiGenerating ? 'AI 生成中…' : '生成提纲'}
                     </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+              {showLinkInput && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mb-4 overflow-hidden"
+                >
+                  <div className="p-3 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-600">添加引用链接</span>
+                      <button
+                        onClick={() => setShowLinkInput(false)}
+                        className="p-1 hover:bg-slate-100 rounded-lg transition-all"
+                      >
+                        <X className="w-3 h-3 text-slate-400" />
+                      </button>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="url"
+                        placeholder="粘贴链接地址..."
+                        value={linkInputValue}
+                        onChange={(e) => setLinkInputValue(e.target.value)}
+                        className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      />
+                      <button
+                        onClick={() => {
+                          if (linkInputValue.trim()) {
+                            setAiPrompt(prev => prev + ` [链接: ${linkInputValue.trim()}]`);
+                            setLinkInputValue('');
+                            setShowLinkInput(false);
+                          }
+                        }}
+                        disabled={!linkInputValue.trim()}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      >
+                        添加
+                      </button>
+                    </div>
                   </div>
                 </motion.div>
               )}
@@ -638,9 +691,29 @@ const SurveyTemplateEditorView: React.FC<SurveyTemplateEditorViewProps> = ({ onB
                                   <Paperclip className="w-3 h-3" />
                                   添加附件
                                 </button>
-                                <button 
+                                <button
                                   className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 rounded-lg text-[10px] font-bold text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 transition-all"
                                   title="添加引用链接"
+                                  onClick={() => {
+                                    const url = prompt('请输入链接地址:');
+                                    if (url) {
+                                      const currentQuestion = activeSection.questions.find((q: Question) => q.id === question.id);
+                                      const currentQuestionText = currentQuestion?.text || '';
+                                      const updatedSections = sections.map(section =>
+                                        section.id === activeSection.id
+                                          ? {
+                                              ...section,
+                                              questions: section.questions.map((q: Question) =>
+                                                q.id === question.id
+                                                  ? { ...q, text: currentQuestionText + ` [链接: ${url}]` }
+                                                  : q
+                                              )
+                                            }
+                                          : section
+                                      );
+                                      setSections(updatedSections);
+                                    }
+                                  }}
                                 >
                                   <Link className="w-3 h-3" />
                                   引用链接
@@ -649,8 +722,25 @@ const SurveyTemplateEditorView: React.FC<SurveyTemplateEditorViewProps> = ({ onB
                                   id={`file-upload-${question.id}`}
                                   type="file"
                                   className="hidden"
-                                  onChange={(_e) => {
-                                    // Handle file upload logic here
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+                                    const currentQuestion = activeSection.questions.find((q: Question) => q.id === question.id);
+                                    const currentQuestionText = currentQuestion?.text || '';
+                                    const updatedSections = sections.map(section =>
+                                      section.id === activeSection.id
+                                        ? {
+                                            ...section,
+                                            questions: section.questions.map((q: Question) =>
+                                              q.id === question.id
+                                                ? { ...q, text: currentQuestionText + ` [附件: ${file.name}]` }
+                                                : q
+                                            )
+                                          }
+                                        : section
+                                    );
+                                    setSections(updatedSections);
+                                    e.target.value = '';
                                   }}
                                 />
                                 <label className="flex items-center gap-2 ml-4 cursor-pointer">
@@ -674,7 +764,10 @@ const SurveyTemplateEditorView: React.FC<SurveyTemplateEditorViewProps> = ({ onB
                                 </label>
                               </div>
                               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-all">
+                                <button
+                                  className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-all"
+                                  onClick={() => setExpandedQuestionSettings(expandedQuestionSettings === question.id ? null : question.id)}
+                                >
                                   <Settings2 className="w-4 h-4" />
                                 </button>
                                 <button
@@ -690,6 +783,92 @@ const SurveyTemplateEditorView: React.FC<SurveyTemplateEditorViewProps> = ({ onB
                             </div>
                           </div>
                         </div>
+
+                        {/* Question Settings Panel */}
+                        <AnimatePresence>
+                          {expandedQuestionSettings === question.id && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
+                                <h4 className="text-xs font-bold text-slate-700">问题设置</h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">问题类型</label>
+                                    <select
+                                      value={question.type}
+                                      onChange={(e) => {
+                                        const updatedSections = sections.map(section =>
+                                          section.id === activeSection.id
+                                            ? {
+                                                ...section,
+                                                questions: section.questions.map((q: Question) =>
+                                                  q.id === question.id
+                                                    ? { ...q, type: e.target.value as Question['type'] }
+                                                    : q
+                                                )
+                                              }
+                                            : section
+                                        );
+                                        setSections(updatedSections);
+                                      }}
+                                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                    >
+                                      <option value="text">文本输入</option>
+                                      <option value="single">单选题</option>
+                                      <option value="multiple">多选题</option>
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">分数权重</label>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      max="10"
+                                      defaultValue="5"
+                                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                      placeholder="1-10"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <label className="flex items-center gap-2">
+                                    <input
+                                      type="checkbox"
+                                      checked={question.required}
+                                      onChange={(e) => {
+                                        const updatedSections = sections.map(section =>
+                                          section.id === activeSection.id
+                                            ? {
+                                                ...section,
+                                                questions: section.questions.map((q: Question) =>
+                                                  q.id === question.id
+                                                    ? { ...q, required: e.target.checked }
+                                                    : q
+                                                )
+                                              }
+                                            : section
+                                        );
+                                        setSections(updatedSections);
+                                      }}
+                                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                    <span className="text-xs font-medium text-slate-700">必填问题</span>
+                                  </label>
+                                  <button
+                                    onClick={() => setExpandedQuestionSettings(null)}
+                                    className="px-3 py-1.5 bg-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-300 transition-all"
+                                  >
+                                    完成
+                                  </button>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     ))}
 
@@ -902,9 +1081,10 @@ const SurveyTemplateEditorView: React.FC<SurveyTemplateEditorViewProps> = ({ onB
                           <Paperclip className="w-3.5 h-3.5" />
                           <span className="text-xs font-bold">上传附件</span>
                         </button>
-                        <button 
+                        <button
                           className="px-3 py-1.5 bg-white border border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-200 rounded-xl transition-all shadow-sm flex items-center gap-1.5"
                           title="引用链接"
+                          onClick={() => setShowLinkInput(true)}
                         >
                           <Link className="w-3.5 h-3.5" />
                           <span className="text-xs font-bold">引用链接</span>
@@ -913,8 +1093,11 @@ const SurveyTemplateEditorView: React.FC<SurveyTemplateEditorViewProps> = ({ onB
                           id="ai-enhance-file-upload"
                           type="file"
                           className="hidden"
-                          onChange={(_e) => {
-                            // Handle file upload
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            setAiInput(prev => prev + ` [附件: ${file.name}]`);
+                            e.target.value = '';
                           }}
                         />
                       </div>

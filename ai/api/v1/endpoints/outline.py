@@ -7,7 +7,7 @@ import re
 import httpx
 import structlog
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Any, Dict, List, Optional
 
 from services.llm import llm_service
@@ -38,10 +38,10 @@ class ApiResponse(BaseModel):
 
 
 class OutlineRequest(BaseModel):
-    topic: str
+    topic: str = Field(..., min_length=1)
     research_goals: Optional[str] = None
     target_users: Optional[str] = None
-    num_questions: Optional[int] = 10
+    num_questions: Optional[int] = Field(default=10, ge=1, le=50)
 
 
 class OutlineResponse(BaseModel):
@@ -108,9 +108,12 @@ async def generate_outline(request: OutlineRequest):
     """
     logger.info("收到提纲生成请求", topic=request.topic)
 
+    target_users_line = f"目标用户：{request.target_users}\n" if request.target_users else ""
+
     user_message = (
         f"主题：{request.topic}\n"
         f"目标：{request.research_goals or '了解客户需求'}\n"
+        f"{target_users_line}"
         f"请生成包含{request.num_questions or 10}个问题的访谈提纲，"
         '格式：{"title": "...", "sections": [{"title": "...", "questions": ["..."]}]}'
     )
